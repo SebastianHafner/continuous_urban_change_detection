@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 ROOT_PATH = Path('/storage/shafner')
 
+
 # helper function to get date from label file name
 # global_monthly_2020_01_mosaic_L15-1335E-1166N_5342_3524_13_Buildings.geojson
 def get_date(label_file: Path) -> tuple:
@@ -90,5 +91,36 @@ def assemble_buildings(dataset: str):
         geofiles.write_json(output_file, all_buildings)
 
 
+def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
+    root_path = path_to_spacenet7_s1s2_dataset
+    site_paths = [f for f in root_path.iterdir() if f.is_dir()]
+
+    data = {
+        's1_bands': ['VV', 'VH'],
+        's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
+        'sites': []
+    }
+
+    for site_path in site_paths:
+
+        s1_path = site_path / 'sentinel1'
+        s1_files = [f for f in s1_path.glob('**/*')]
+
+        months = [int(s1_file.stem.split('_')[-1]) for s1_file in s1_files]
+        years = [int(s1_file.stem.split('_')[-2]) for s1_file in s1_files]
+        dates = [(year, month) for year, month in zip(years, months)]
+
+        site_data = {
+            'name': site_path.name,
+            'dates': dates
+        }
+
+        data['sites'].append(site_data)
+
+    output_file = root_path / f'metadata.geojson'
+    geofiles.write_json(output_file, data)
+
+
 if __name__ == '__main__':
-    assemble_buildings('train')
+    # assemble_buildings('train')
+    generate_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
