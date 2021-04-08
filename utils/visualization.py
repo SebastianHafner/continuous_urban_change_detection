@@ -35,12 +35,6 @@ def plot_buildings(ax, file: Path, show_title: bool = False):
     img, _, _ = read_tif(file)
     img = img > 0
     img = img if len(img.shape) == 2 else img[:, :, 0]
-    cmap = colors.ListedColormap(['lightgray', 'red'])
-    boundaries = [0, 0.5, 1]
-    norm = colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-    # ax.imshow(img, cmap=cmap, norm=norm)
-    # ax.imshow(img, cmap='Reds', vmin=0, vmax=1.2)
-    # ax.imshow(img, cmap='Reds')
     ax.imshow(img, cmap='gray', vmin=0, vmax=1)
     ax.set_xticks([])
     ax.set_yticks([])
@@ -48,8 +42,8 @@ def plot_buildings(ax, file: Path, show_title: bool = False):
         ax.set_title('ground truth')
 
 
-def plot_blackwhite(ax, img: np.ndarray):
-    ax.imshow(img.clip(0, 1), cmap='gray')
+def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
+    ax.imshow(img.clip(0, 1), cmap=cmap)
     ax.set_xticks([])
     ax.set_yticks([])
 
