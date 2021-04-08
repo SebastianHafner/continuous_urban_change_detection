@@ -109,6 +109,8 @@ def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
         months = [int(s1_file.stem.split('_')[-1]) for s1_file in s1_files]
         years = [int(s1_file.stem.split('_')[-2]) for s1_file in s1_files]
         dates = [(year, month) for year, month in zip(years, months)]
+        dates = sorted(dates, key=lambda date: date[0] * 12 + date[1])
+        print(dates)
 
         site_data = {
             'name': site_path.name,
