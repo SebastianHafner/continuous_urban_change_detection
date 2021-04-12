@@ -4,6 +4,7 @@ import matplotlib as mpl
 from utils.geofiles import *
 import numpy as np
 from pathlib import Path
+from matplotlib import cm
 
 
 def plot_optical(ax, file: Path, vis: str = 'true_color', scale_factor: float = 0.4,
@@ -40,6 +41,21 @@ def plot_buildings(ax, file: Path, show_title: bool = False):
     ax.set_yticks([])
     if show_title:
         ax.set_title('ground truth')
+
+
+def plot_endtoend_label(ax, arr: np.ndarray):
+    n_colors = 25
+    jet = cm.get_cmap('jet', n_colors)
+    newcolors = jet(np.linspace(0, 1, n_colors))
+    white = np.array([1, 1, 1, 1])
+    black = np.array([0, 0, 0, 1])
+    newcolors[0, :] = black
+    newcolors[1, :] = white
+    newcmp = colors.ListedColormap(newcolors)
+
+    ax.imshow(arr, cmap=newcmp, vmin=0, vmax=25)
+    ax.set_xticks([])
+    ax.set_yticks([])
 
 
 def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
