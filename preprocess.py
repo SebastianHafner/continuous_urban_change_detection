@@ -117,6 +117,11 @@ def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
     geofiles.write_json(output_file, data)
 
 
+# TODO: implement this
+def generate_endtoend_labels():
+    pass
+
+
 if __name__ == '__main__':
     # assemble_buildings('train')
     generate_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')

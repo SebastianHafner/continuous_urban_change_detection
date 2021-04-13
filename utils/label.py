@@ -1,23 +1,15 @@
 from pathlib import Path
-from utils import geofiles, visualization
+from utils import geofiles, visualization, dataset_helpers
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-DATASET_PATH = Path('/storage/shafner/continuous_urban_change_detection/spacenet7_s1s2_dataset')
-
-
-def get_time_series(aoi_id: str) -> list:
-    metadata_file = DATASET_PATH / 'metadata.geojson'
-    metadata = geofiles.load_json(metadata_file)
-    return metadata['sites'][aoi_id]
-
-
-def generate_endtoend_label(aoi_id) -> np.ndarray:
-    dates = get_time_series(aoi_id)
+def generate_endtoend_label(aoi_id: str) -> np.ndarray:
+    dates = dataset_helpers.get_time_series(aoi_id)
+    buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
     endtoend_label = None
     for i, (year, month) in enumerate(dates):
-        label_file = DATASET_PATH / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
+        label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
         label, _, _ = geofiles.read_tif(label_file)
         label = label > 0
         if endtoend_label is None:
@@ -29,6 +21,22 @@ def generate_endtoend_label(aoi_id) -> np.ndarray:
             endtoend_label[new_builtup] = i + 1
 
     return endtoend_label
+
+
+def generate_timeseries_label(aoi_id: str) -> np.ndarray:
+    dates = dataset_helpers.get_time_series(aoi_id)
+    buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
+    n = len(dates)
+    assembled_label = None
+    for i, (year, month) in enumerate(dates):
+        label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
+        label, _, _ = geofiles.read_tif(label_file)
+        label = label > 0
+        if assembled_label is None:
+            assembled_label = np.zeros((*label.shape, n), dtype=np.uint8)
+        assembled_label[label, i] = 1
+
+    return assembled_label
 
 
 if __name__ == '__main__':
