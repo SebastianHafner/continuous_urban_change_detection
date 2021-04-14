@@ -2,7 +2,7 @@ import numpy as np
 import scipy
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-from utils import label, dataset_helpers
+from utils import label, prediction, dataset_helpers
 
 
 def sigmoid(x, x0, b):
@@ -39,6 +39,7 @@ def run_stepfunction_on_label(aoi_id: str):
     i, j, _ = pixel_coords
 
     assembled_label = label.generate_timeseries_label(aoi_id)
+    # TODO: figure out why list in list
     y = assembled_label[i, j, :][0]
 
     ts = dataset_helpers.get_time_series(aoi_id)
@@ -54,7 +55,33 @@ def run_stepfunction_on_label(aoi_id: str):
     pass
 
 
+def run_stepfunction_on_prediction(config_name: str, aoi_id: str):
+    # find a suitable pixel for time series analysis
+    endtoend_label = label.generate_endtoend_label(aoi_id)
+    change_index = 10
+    change_on_index = np.argwhere(endtoend_label == change_index)
+    pixel_index = 0
+    pixel_coords = change_on_index[pixel_index]
+    print(pixel_coords)
+    i, j, _ = pixel_coords
+
+    prediction_ts = prediction.generate_timeseries_prediction('fusionda_cons05_jaccardmorelikeloss', aoi_id)
+    y = prediction_ts[i, j, :]
+
+    ts = dataset_helpers.get_time_series(aoi_id)
+    x = [year * 12 + month for year, month in ts]
+    x = np.linspace(0, len(x), len(x))
+
+    print(x, y)
+    args = fit_stepfunction(y)
+    print(args)
+    plt.scatter(x, y)
+    plt.plot(x, sigmoid(x, *args))
+    plt.show()
+    pass
+
+
 if __name__ == '__main__':
     # stepfunction_example()
-    run_stepfunction_on_label('L15-0331E-1257N_1327_3160_13')
-
+    # run_stepfunction_on_label('L15-0331E-1257N_1327_3160_13')
+    run_stepfunction_on_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
