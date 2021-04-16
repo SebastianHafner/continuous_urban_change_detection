@@ -2,7 +2,7 @@ import numpy as np
 import scipy
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-from utils import label, prediction, dataset_helpers
+from utils import label, prediction, dataset_helpers, visualization
 
 
 def sigmoid(x, x0, b):
@@ -22,7 +22,7 @@ def stepfunction_example():
 
 def fit_stepfunction(probs: list):
     n = len(probs)
-    x = np.linspace(0, n, n)
+    x = np.linspace(0, n-1, n)
     args, cov = curve_fit(sigmoid, x, probs)
     return args
 
@@ -65,20 +65,20 @@ def run_stepfunction_on_prediction(config_name: str, aoi_id: str):
     print(pixel_coords)
     i, j, _ = pixel_coords
 
-    prediction_ts = prediction.generate_timeseries_prediction('fusionda_cons05_jaccardmorelikeloss', aoi_id)
+    prediction_ts = prediction.generate_timeseries_prediction(config_name, aoi_id)
     y = prediction_ts[i, j, :]
+    y_tresh = y > 0.5
 
     ts = dataset_helpers.get_time_series(aoi_id)
-    x = [year * 12 + month for year, month in ts]
-    x = np.linspace(0, len(x), len(x))
+    x = np.linspace(0, len(ts)-1, len(ts))
 
     print(x, y)
-    args = fit_stepfunction(y)
+    args = fit_stepfunction(y_tresh)
     print(args)
-    plt.scatter(x, y)
-    plt.plot(x, sigmoid(x, *args))
-    plt.show()
-    pass
+    fig, ax = plt.subplots()
+    y_pred = sigmoid(x, *args)
+    visualization.plot_stepfunctionfit(ax, x, y, y_pred, ts, sigmoid, args)
+
 
 
 if __name__ == '__main__':

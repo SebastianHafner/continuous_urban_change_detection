@@ -136,6 +136,14 @@ def plot_probability_histogram(ax, probability: np.ndarray, show_title: bool = F
         ax.set_title('probability histogram')
 
 
+def plot_stepfunctionfit(ax, x, y, y_pred, dates, function, args):
+    ax.scatter(x, y_pred)
+    ax.plot(x, y_pred)
+    x_labels = [f'{year}-{month}' for year, month in dates]
+    ax.set_xticklabels(x, x_labels)
+    ax.set_ylim((0, 1))
+
+
 if __name__ == '__main__':
     arr = np.array([[0, 0.01, 0.1, 0.89, 0.9, 1, 1, 1]]).flatten()
     # hist, bin_edges = np.histogram(arr, bins=10, range=(0, 1))
