@@ -113,7 +113,7 @@ def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
 
         data['sites'][site_path.name] = dates
 
-    output_file = root_path / f'metadata.geojson'
+    output_file = root_path / f'metadata.json'
     geofiles.write_json(output_file, data)
 
 

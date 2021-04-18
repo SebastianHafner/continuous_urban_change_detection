@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def visualize_time_series(aoi_id: str):
+def visualize_time_series(aoi_id: str, save_plot: bool = False):
     dates = dataset_helpers.get_time_series(aoi_id)
     n = len(dates)
     n_rows = 3
@@ -22,7 +22,13 @@ def visualize_time_series(aoi_id: str):
         visualization.plot_buildings(axs[2, i], label_file)
         axs[0, i].set_title(f'{year}-{month:02d}')
 
-    plt.show()
+    if not save_plot:
+        plt.show()
+        plt.close(fig)
+    else:
+        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / f'time_series_{aoi_id}.png'
+        output_file.parent.mkdir(exist_ok=True)
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
 
 
 def visualize_construction(aoi_id: str):
@@ -53,7 +59,7 @@ def visualize_construction(aoi_id: str):
     plt.show()
 
 
-
 if __name__ == '__main__':
-    visualize_time_series('L15-0331E-1257N_1327_3160_13')
+    for aoi_id in dataset_helpers.get_all_ids():
+        visualize_time_series(aoi_id, save_plot=True)
     # visualize_construction('L15-0331E-1257N_1327_3160_13')

@@ -80,105 +80,15 @@ def run_stepfunction_on_prediction(config_name: str, aoi_id: str):
     visualization.plot_stepfunctionfit(ax, x, y, y_pred, ts, sigmoid, args)
 
 
-def heaviside_stepfunction_example():
-    import numpy, scipy, matplotlib
-    import matplotlib.pyplot as plt
-    from scipy.optimize import curve_fit
-    from scipy.optimize import differential_evolution
-    import warnings
-
-    # generate data for testing
-    x = numpy.linspace(-2, 2, 1000)
-    a = 0.5
-    yl = numpy.ones_like(x[x < a]) * -0.4 + numpy.random.normal(0, 0.05, x[x < a].shape[0])
-    yr = numpy.ones_like(x[x >= a]) * 0.4 + numpy.random.normal(0, 0.05, x[x >= a].shape[0])
-    y = numpy.concatenate((yl, yr))
-
-    # alias data to match pervious example
-    xData = x
-    yData = y
-
-    def func(x, a, b):  # variation of the Heaviside step function
-        return 0.5 * b * (numpy.sign(x - a))
-
-    # function for genetic algorithm to minimize (sum of squared error)
-    def sumOfSquaredError(parameterTuple):
-        warnings.filterwarnings("ignore")  # do not print warnings by genetic algorithm
-        val = func(xData, *parameterTuple)
-        return numpy.sum((yData - val) ** 2.0)
-
-    def generate_Initial_Parameters():
-        # min and max used for bounds
-        maxX = max(xData)
-        minX = min(xData)
-
-        parameterBounds = []
-        parameterBounds.append([minX, maxX])  # search bounds for a
-        parameterBounds.append([minX, maxX])  # search bounds for b
-
-        # "seed" the numpy random number generator for repeatable results
-        result = differential_evolution(sumOfSquaredError, parameterBounds, seed=3)
-        return result.x
-
-    # by default, differential_evolution completes by calling curve_fit() using parameter bounds
-    geneticParameters = generate_Initial_Parameters()
-
-    # now call curve_fit without passing bounds from the genetic algorithm,
-    # just in case the best fit parameters are aoutside those bounds
-    fittedParameters, pcov = curve_fit(func, xData, yData, geneticParameters)
-    print('Fitted parameters:', fittedParameters)
-    print()
-
-    modelPredictions = func(xData, *fittedParameters)
-
-    absError = modelPredictions - yData
-
-    SE = numpy.square(absError)  # squared errors
-    MSE = numpy.mean(SE)  # mean squared errors
-    RMSE = numpy.sqrt(MSE)  # Root Mean Squared Error, RMSE
-    Rsquared = 1.0 - (numpy.var(absError) / numpy.var(yData))
-
-    print()
-    print('RMSE:', RMSE)
-    print('R-squared:', Rsquared)
-
-    print()
-
-    ##########################################################
-    # graphics output section
-    def ModelAndScatterPlot(graphWidth, graphHeight):
-        f = plt.figure(figsize=(graphWidth / 100.0, graphHeight / 100.0), dpi=100)
-        axes = f.add_subplot(111)
-
-        # first the raw data as a scatter plot
-        axes.plot(xData, yData, 'D')
-
-        # create data for the fitted equation plot
-        xModel = numpy.linspace(min(xData), max(xData))
-        yModel = func(xModel, *fittedParameters)
-
-        # now the model as a line plot
-        axes.plot(xModel, yModel)
-
-        axes.set_xlabel('X Data')  # X axis data label
-        axes.set_ylabel('Y Data')  # Y axis data label
-
-        plt.show()
-        plt.close('all')  # clean up after using pyplot
-
-    graphWidth = 800
-    graphHeight = 600
-    ModelAndScatterPlot(graphWidth, graphHeight)
-
-def dummy_data(change_index: int, n: int = 100, xlim: tuple = (0, 10)):
-    x = np.linspace(*xlim, n)
+def dummy_data(change_index: int, n: int = 100):
+    x = np.arange(n)
     if change_index is None:
         y = np.random.rand(n) + np.random.choice([0, 1])
     else:
         yl = np.random.rand(change_index)
         yr = np.random.rand(n - change_index) + 100
         y = np.concatenate((yl, yr), axis=0) / 100
-    return x, y
+    return x.astype(np.float), y.astype(np.float)
 
 # https://stackoverflow.com/questions/41147694/how-to-fit-a-step-function-in-python
 def plot_heaviside_function():
@@ -197,8 +107,82 @@ def plot_heaviside_function():
     # print(popt)
 
     # popt, pcov = curve_fit(change_func, x_obs, y_obs, bounds=([0], [10]))
-    def rmse(y, y_hat): return np.sqrt(np.sum(np.square(y_hat - y)) / np.size(y))
     print(popt)
+
+
+# https://www.semicolonworld.com/question/56035/how-to-apply-piecewise-linear-fit-in-python
+def piecewise_function_fit():
+    x_obs, y_obs = dummy_data(12)
+
+    def piecewise_linear(x, x0, y0, k1, k2):
+        return np.piecewise(x, [x < x0], [lambda x: k1 * x + y0 - k1 * x0, lambda x: k2 * x + y0 - k2 * x0])
+
+    def change_func(x, x0):
+        return np.piecewise(x, [x < x0], [lambda x: 0, lambda x: 1])
+    fit_func = change_func
+    p, e = curve_fit(fit_func, x_obs, y_obs)
+    print(p)
+    xd = np.linspace(0, 15, 100)
+    plt.plot(x_obs, y_obs, "o")
+    plt.plot(xd, fit_func(xd, *p))
+    plt.show()
+
+
+def change_func(x, x0):
+    # return np.piecewise(x, [x < a], [lambda x: 0, lambda x: 1])
+    return np.piecewise(x, [x < x0, x >= x0], [0., 1.])
+
+
+def piecewise_linear(x, x0, y0, k1, k2):
+    return np.piecewise(x, [x < x0], [lambda x: k1 * x + y0 - k1 * x0, lambda x: k2 * x + y0 - k2 * x0])
+
+
+def nochange_func(x, a):
+    return a
+
+
+def rmse(y, y_hat):
+    return np.sqrt(np.sum(np.square(y_hat - y)) / np.size(y))
+
+
+def detect_change(x: np.ndarray, y: np.ndarray):
+    change_params, _ = curve_fit(change_func, x, y)
+    nochange_params, _ = curve_fit(nochange_func, x, y)
+    print(change_params, nochange_params)
+
+    y_pred_change = change_func(x, *change_params)
+    y_pred_nochange = nochange_func(x, *nochange_params)
+
+    rmse_change = rmse(y, y_pred_change)
+    rmse_nochange = rmse(y, y_pred_nochange)
+
+
+def check_change_detection_algorithm():
+    change_index = 50
+    x_obs, y_obs = dummy_data(change_index)
+    plt.scatter(x_obs, y_obs)
+    plt.ylim((0, 1))
+
+    y_pred = change_func(x_obs, change_index)
+    plt.plot(x_obs, y_pred, 'ko-')
+
+    plt.show()
+    change_params, _ = curve_fit(change_func, x_obs, y_obs)
+    print(change_params)
+    # detect_change(x_obs, y_obs)
+
+
+def piecewise_fit2():
+    x = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dtype=float)
+    y = np.array([5, 7, 9, 11, 13, 15, 28.92, 42.81, 56.7, 70.59, 84.47, 98.36, 112.25, 126.14, 140.03])
+
+    def piecewise_linear(x, x0, y0, k1, k2):
+        return np.piecewise(x, [x < x0, x >= x0], [lambda x: k1 * x + y0 - k1 * x0, lambda x: k2 * x + y0 - k2 * x0])
+
+    p, e = optimize.curve_fit(piecewise_linear, x, y)
+    xd = np.linspace(0, 15, 100)
+    plt.plot(x, y, "o")
+    plt.plot(xd, piecewise_linear(xd, *p))
 
 
 if __name__ == '__main__':
@@ -206,4 +190,6 @@ if __name__ == '__main__':
     # run_stepfunction_on_label('L15-0331E-1257N_1327_3160_13')
     # run_stepfunction_on_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
     # heaviside_stepfunction_example()
-    plot_heaviside_function()
+    # plot_heaviside_function()
+    check_change_detection_algorithm()
+    # piecewise_function_fit()
