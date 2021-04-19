@@ -56,3 +56,9 @@ class DeepChangeVectorAnalysis(object):
 
     def __init__(self):
         pass
+
+
+class Thresholding(object):
+
+    def __init__(self):
+        pass

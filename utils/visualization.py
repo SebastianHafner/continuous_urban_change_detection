@@ -7,6 +7,31 @@ from pathlib import Path
 from matplotlib import cm
 
 
+class DateColorMap(object):
+
+    def __init__(self, n: int = 25, color_map: str = 'jet'):
+        self.n = n
+        default_cmap = cm.get_cmap(color_map, n)
+        cmap_colors = default_cmap(np.linspace(0, 1, n))
+        white = np.array([1, 1, 1, 1])
+        black = np.array([0, 0, 0, 1])
+        cmap_colors[0, :] = black
+        cmap_colors[1, :] = white
+        self.cmap = colors.ListedColormap(cmap_colors)
+
+    def get_cmap(self):
+        return self.cmap
+
+    def get_vmin(self):
+        return 0
+
+    def get_vmax(self):
+        return self.n
+
+
+
+
+
 def plot_optical(ax, file: Path, vis: str = 'true_color', scale_factor: float = 0.4,
                  show_title: bool = False):
     img, _, _ = read_tif(file)
@@ -56,6 +81,17 @@ def plot_endtoend_label(ax, arr: np.ndarray):
     ax.imshow(arr, cmap=newcmp, vmin=0, vmax=25)
     ax.set_xticks([])
     ax.set_yticks([])
+
+
+def plot_change_date(ax, arr: np.ndarray):
+    cmap = DateColorMap()
+    ax.imshow(arr, cmap=cmap.get_cmap(), vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def plot_change_data_bar(ax):
+    pass
 
 
 def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):

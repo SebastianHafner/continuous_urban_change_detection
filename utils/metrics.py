@@ -20,16 +20,12 @@ def compute_false_negatives(y_pred: np.ndarray, y_true: np.ndarray):
 
 
 def compute_change_precision(y_pred: np.ndarray, y_true: np.ndarray) -> float:
-    y_pred = y_pred > 1
-    y_true = y_true > 1
     tp = compute_true_positives(y_pred, y_true)
     fp = compute_false_positives(y_pred, y_true)
     return float(tp / (tp + fp))
 
 
 def compute_change_recall(y_pred: np.ndarray, y_true: np.ndarray):
-    y_pred = y_pred > 1
-    y_true = y_true > 1
     tp = compute_true_positives(y_pred, y_true)
     fn = compute_false_negatives(y_pred, y_true)
     return float(tp / (tp + fn))
