@@ -1,6 +1,6 @@
 import pandas as pd
 from pathlib import Path
-from utils import geofiles
+from utils import geofiles, dataset_helpers, label
 from tqdm import tqdm
 
 ROOT_PATH = Path('/storage/shafner')
@@ -117,11 +117,15 @@ def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
     geofiles.write_json(output_file, data)
 
 
-# TODO: implement this
 def generate_endtoend_labels():
-    pass
+    for aoi_id in tqdm(dataset_helpers.get_all_ids()):
+        endtoend_label = label.generate_endtoend_label(aoi_id)
+        geotransform, crs = dataset_helpers.get_geo(aoi_id)
+        output_file = dataset_helpers.dataset_path() / aoi_id / f'{aoi_id}_endtoend_label.tif'
+        geofiles.write_tif(output_file, endtoend_label, geotransform, crs)
 
 
 if __name__ == '__main__':
     # assemble_buildings('train')
-    generate_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
+    # generate_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
+    generate_endtoend_labels()

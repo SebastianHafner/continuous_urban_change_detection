@@ -5,7 +5,7 @@ import numpy as np
 
 
 def generate_endtoend_label(aoi_id: str) -> np.ndarray:
-    dates = dataset_helpers.get_time_series(aoi_id)
+    dates = dataset_helpers.get_time_series(aoi_id, ignore_bad_data=True)
     buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
     endtoend_label = None
     for i, (year, month) in enumerate(dates):

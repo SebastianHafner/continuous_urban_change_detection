@@ -136,12 +136,21 @@ def plot_probability_histogram(ax, probability: np.ndarray, show_title: bool = F
         ax.set_title('probability histogram')
 
 
-def plot_stepfunctionfit(ax, x, y, y_pred, dates, function, args):
-    ax.scatter(x, y_pred)
-    ax.plot(x, y_pred)
-    x_labels = [f'{year}-{month}' for year, month in dates]
-    ax.set_xticklabels(x, x_labels)
-    ax.set_ylim((0, 1))
+def plot_fit(ax, dates: list, probs: np.ndarray, pred: np.ndarray, change_index: int = None):
+    x = np.array([year * 12 + month for year, month in dates])
+    x_min = np.min(x)
+    x = x - x_min
+    ax.scatter(x, probs, label='data')
+    ax.plot(x, pred, 'k--', label='fit')
+    if change_index is not None:
+        change_year, change_month = dates[change_index]
+        y_change = change_year * 12 + change_month - x_min
+        ax.vlines(y_change, ymin=0, ymax=1, colors=['red'], label='change', linestyles='dashed')
+    x_labels = [f'{str(year)[-2:]}-{month}' for year, month in dates]
+    ax.set_xticks(x)
+    ax.set_xticklabels(x_labels)
+    ax.set_ylim((-0.1, 1.1))
+    ax.legend()
 
 
 if __name__ == '__main__':
