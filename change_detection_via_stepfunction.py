@@ -2,9 +2,9 @@ import numpy as np
 import scipy
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-from utils import label, prediction, dataset_helpers, visualization, dummy_data
+from utils import label, prediction, dataset_helpers, visualization, dummy_data, geofiles
 from change_detection_models import StepFunctionModel
-
+from tqdm import tqdm
 
 def run_stepfunction_on_label(aoi_id: str):
 
@@ -43,7 +43,7 @@ def run_stepfunction_on_prediction(config_name: str, aoi_id: str):
     i, j, _ = pixel_coords
 
     probs_cube = prediction.generate_timeseries_prediction(config_name, aoi_id)
-    probs = probs_cube[i, j, :]
+    probs = np.array([probs_cube[i, j, :]])
 
     dates = dataset_helpers.get_time_series(aoi_id)
 
@@ -56,27 +56,34 @@ def run_stepfunction_on_prediction(config_name: str, aoi_id: str):
     plt.show()
 
 
-def check_change_detection_algorithm():
-    change_index = 10
-    x_obs, y_obs = dummy_data(change_index)
-    plt.scatter(x_obs, y_obs)
-    plt.ylim((0, 1))
+def run_change_detection(config_name: str, aoi_id: str):
 
+    dates = dataset_helpers.get_time_series(aoi_id)
+    probs_cube = prediction.generate_timeseries_prediction(config_name, aoi_id)
     model = StepFunctionModel()
-    model.fit(x_obs, y_obs)
-    y_pred = model.predict(x_obs)
-    plt.plot(x_obs, y_pred, 'k--', label='')
-    plt.show()
+    change_detection = np.zeros((probs_cube.shape[0], probs_cube.shape[1]), dtype=np.uint8)
+    n = change_detection.size
+    f = 0
+    print(change_detection.shape)
+    # TODO: maybe get rid of loop
+    for index, _ in np.ndenumerate(change_detection):
+        i, j = index
+        probs = probs_cube[i, j, :]
+
+        model.fit(dates, probs)
+
+        change_detection[index] = model.model + 2
+        f += 1
+        if f % 10_000 == 0:
+            print(f'{f}/{n}')
+
+    geotransform, crs = dataset_helpers.get_geo(aoi_id)
+    cd_file = dataset_helpers.root_path() / 'inference' / 'stepfunction' / f'pred_{aoi_id}.tif'
+    cd_file.parent.mkdir(exist_ok=True)
+    geofiles.write_tif(cd_file, change_detection, geotransform, crs)
 
 
 if __name__ == '__main__':
-    # stepfunction_example()
     # run_stepfunction_on_label('L15-0331E-1257N_1327_3160_13')
     # run_stepfunction_on_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
-    # heaviside_stepfunction_example()
-    # plot_heaviside_function()
-    # check_change_detection_algorithm()
-    # piecewise_function_fit()
-    # piecewise_fit2()
-    # run_stepfunction_on_label('L15-0331E-1257N_1327_3160_13')
-    run_stepfunction_on_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
+    run_change_detection('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')

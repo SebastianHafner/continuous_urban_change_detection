@@ -64,40 +64,6 @@ def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
     ax.set_yticks([])
 
 
-def plot_stable_buildings(ax, file_all: Path, file_stable: Path, show_title: bool = False):
-    img_all, _, _ = read_tif(file_all)
-    img_all = img_all > 0
-    img_all = img_all if len(img_all.shape) == 2 else img_all[:, :, 0]
-
-    img_stable, _, _ = read_tif(file_stable)
-    img_stable = img_stable > 0
-    img_stable = img_stable if len(img_stable.shape) == 2 else img_stable[:, :, 0]
-
-    img_instable = np.logical_and(img_all, np.logical_not(img_stable)) * 2
-
-    cmap = colors.ListedColormap(['white', 'red', 'blue'])
-    boundaries = [0, 0.5, 1, 1.5]
-    norm = colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-
-    ax.imshow(img_all + img_instable, cmap=cmap, norm=norm)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    if show_title:
-        ax.set_title('ground truth')
-
-
-def plot_stable_buildings_v2(ax, arr: np.ndarray, show_title: bool = True):
-    cmap = colors.ListedColormap(['white', 'blue', 'red'])
-    print(np.min(arr), np.max(arr))
-    boundaries = [-0.5, 0.5, 1.5, 2.5]
-    norm = colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-    ax.imshow(arr, cmap=cmap, norm=norm)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    if show_title:
-        ax.set_title('ground truth')
-
-
 def plot_probability(ax, probability: np.ndarray, title: str = None):
     # ax.imshow(probability, cmap='bwr', vmin=0, vmax=1)
     cmap = colors.ListedColormap(['blue', 'red'])

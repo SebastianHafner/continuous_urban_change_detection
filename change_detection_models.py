@@ -11,7 +11,7 @@ class StepFunctionModel(object):
         return np.full(x.shape, fill_value=return_value, dtype=np.float)
 
     @staticmethod
-    def change_function(x, x0):
+    def change_function(x: np.ndarray, x0: float):
         return np.piecewise(x, [x < x0, x >= x0], [0., 1.])
 
     @staticmethod
