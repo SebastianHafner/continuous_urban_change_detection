@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib as mpl
-from utils.geofiles import *
+from utils import geofiles, dataset_helpers
 import numpy as np
 from pathlib import Path
 from matplotlib import cm
@@ -29,43 +29,45 @@ class DateColorMap(object):
         return self.n
 
 
-
-
-
-def plot_optical(ax, file: Path, vis: str = 'true_color', scale_factor: float = 0.4,
-                 show_title: bool = False):
-    img, _, _ = read_tif(file)
+def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color', scale_factor: float = 0.4):
+    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+    img, _, _ = geofiles.read_tif(file)
     band_indices = [2, 1, 0] if vis == 'true_color' else [6, 2, 1]
     bands = img[:, :, band_indices] / scale_factor
     bands = bands.clip(0, 1)
     ax.imshow(bands)
     ax.set_xticks([])
     ax.set_yticks([])
-    if show_title:
-        ax.set_title(f'optical ({vis})')
 
 
-def plot_sar(ax, file: Path, vis: str = 'VV', show_title: bool = False):
-    img, _, _ = read_tif(file)
+def plot_sar(ax, aoi_id: str, year: int, month: int, vis: str = 'VV'):
+    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+    img, _, _ = geofiles.read_tif(file)
     band_index = 0 if vis == 'VV' else 1
     bands = img[:, :, band_index]
     bands = bands.clip(0, 1)
     ax.imshow(bands, cmap='gray')
     ax.set_xticks([])
     ax.set_yticks([])
-    if show_title:
-        ax.set_title(f'sar ({vis})')
 
 
-def plot_buildings(ax, file: Path, show_title: bool = False):
-    img, _, _ = read_tif(file)
+def plot_buildings(ax, aoi_id: str, year: int, month: int):
+    file = dataset_helpers.dataset_path() / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
+    img, _, _ = geofiles.read_tif(file)
     img = img > 0
     img = img if len(img.shape) == 2 else img[:, :, 0]
     ax.imshow(img, cmap='gray', vmin=0, vmax=1)
     ax.set_xticks([])
     ax.set_yticks([])
-    if show_title:
-        ax.set_title('ground truth')
+
+
+def plot_prediction(ax, config_name: str, aoi_id: str, year: int, month: int):
+    file = dataset_helpers.dataset_path() / aoi_id / config_name / f'pred_{aoi_id}_{year}_{month:02d}.tif'
+    img, _, _ = geofiles.read_tif(file)
+    img = img if len(img.shape) == 2 else img[:, :, 0]
+    ax.imshow(img, cmap='gray', vmin=0, vmax=1)
+    ax.set_xticks([])
+    ax.set_yticks([])
 
 
 def plot_endtoend_label(ax, arr: np.ndarray):
@@ -90,8 +92,15 @@ def plot_change_date(ax, arr: np.ndarray):
     ax.set_yticks([])
 
 
-def plot_change_data_bar(ax):
-    pass
+def plot_change_data_bar(ax, dates: list):
+    cb_ticks = [0.5, 1.5] + list(np.arange(len(dates)) + 2.5)
+    cmap = DateColorMap()
+    norm = mpl.colors.Normalize(vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
+    cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap.get_cmap(), norm=norm, orientation='horizontal',
+                                   ticks=cb_ticks)
+    cb.set_label('Change Date (yy-mm)', fontsize=20)
+    cb_ticklabels = ['BG', 'BUA'] + [dataset_helpers.date2str(d) for d in dates]
+    cb.ax.set_xticklabels(cb_ticklabels)
 
 
 def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
@@ -100,42 +109,20 @@ def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
     ax.set_yticks([])
 
 
-def plot_probability(ax, probability: np.ndarray, title: str = None):
-    # ax.imshow(probability, cmap='bwr', vmin=0, vmax=1)
-    cmap = colors.ListedColormap(['blue', 'red'])
-    boundaries = [0, 0.5, 1]
-    norm = colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-    # ax.imshow(probability, cmap=cmap, norm=norm)
-    # ax.imshow(probability, cmap='Reds', vmin=0, vmax=1.2)
-    ax.imshow(probability, cmap='gray', vmin=0, vmax=1)
+def plot_model_error(ax, method: str, aoi_id: str):
+    file = dataset_helpers.root_path() / 'inference' / method / f'model_error_{aoi_id}.tif'
+    error, _, _ = geofiles.read_tif(file)
+    ax.imshow(error, cmap='OrRd', vmin=0, vmax=0.5)
     ax.set_xticks([])
     ax.set_yticks([])
-    if title is not None:
-        ax.set_title(title)
 
 
-def plot_prediction(ax, prediction: np.ndarray, show_title: bool = False):
-    cmap = colors.ListedColormap(['white', 'red'])
-    boundaries = [0, 0.5, 1]
-    norm = colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-    ax.imshow(prediction, cmap=cmap, norm=norm)
-    # ax.imshow(prediction, cmap='Reds')
-    ax.set_xticks([])
-    ax.set_yticks([])
-    if show_title:
-        ax.set_title('prediction')
-
-
-def plot_probability_histogram(ax, probability: np.ndarray, show_title: bool = False):
-    bin_edges = np.linspace(0, 1, 21)
-    values = probability.flatten()
-    ax.hist(values, bins=bin_edges, range=(0, 1))
-    ax.set_xlim((0, 1))
-    ax.set_xticks(np.linspace(0, 1, 5))
-    ax.set_yscale('log')
-
-    if show_title:
-        ax.set_title('probability histogram')
+def plot_model_error_bar(ax, vmax: float = 0.5):
+    cb_ticks = np.linspace(0, vmax, 5)
+    norm = mpl.colors.Normalize(vmin=0, vmax=vmax)
+    cmap = cm.get_cmap('Reds')
+    cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm, orientation='horizontal', ticks=cb_ticks)
+    cb.set_label('RMSE', fontsize=20)
 
 
 def plot_fit(ax, dates: list, probs: np.ndarray, pred: np.ndarray, change_index: int = None):

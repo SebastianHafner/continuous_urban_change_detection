@@ -4,14 +4,33 @@ from utils import geofiles, dataset_helpers, label_helpers, prediction_helpers, 
 
 
 def evaluate_change_detection(aoi_id: str, method: str):
-    pred = prediction_helpers.load_prediction(aoi_id, method, 'change_detection')
-    # TODO: use function from label_helpers for this
-    label_file = dataset_helpers.dataset_path() / aoi_id / f'label_change_{aoi_id}.tif'
+    pred = prediction_helpers.load_prediction(aoi_id, method, 'change_dating')
+    label_file = dataset_helpers.dataset_path() / aoi_id / f'label_endtoend_{aoi_id}.tif'
     label, _, _ = geofiles.read_tif(label_file)
-    f1_score = metrics.compute_change_f1_score(pred.flatten(), label.flatten())
-    precision = metrics.compute_change_precision(pred.flatten(), label.flatten())
-    recall = metrics.compute_change_recall(pred.flatten(), label.flatten())
-    print(f'f1 score {f1_score:.3f} - precision {precision:.3f} - recall {recall:.3f}')
+
+    # background
+    y = label == 0
+    y_hat = pred == 0
+    f1_score = metrics.compute_f1_score(y_hat.flatten(), y.flatten())
+    precision = metrics.compute_precision(y_hat.flatten(), y.flatten())
+    recall = metrics.compute_recall(y_hat.flatten(), y.flatten())
+    print(f'BG: f1 score {f1_score:.3f} - precision {precision:.3f} - recall {recall:.3f}')
+
+    # BUA
+    y = label == 1
+    y_hat = pred == 1
+    f1_score = metrics.compute_f1_score(y_hat.flatten(), y.flatten())
+    precision = metrics.compute_precision(y_hat.flatten(), y.flatten())
+    recall = metrics.compute_recall(y_hat.flatten(), y.flatten())
+    print(f'BUA: f1 score {f1_score:.3f} - precision {precision:.3f} - recall {recall:.3f}')
+
+    # change
+    y = label > 1
+    y_hat = pred > 1
+    f1_score = metrics.compute_f1_score(y_hat.flatten(), y.flatten())
+    precision = metrics.compute_precision(y_hat.flatten(), y.flatten())
+    recall = metrics.compute_recall(y_hat.flatten(), y.flatten())
+    print(f'Change: f1 score {f1_score:.3f} - precision {precision:.3f} - recall {recall:.3f}')
 
 
 def evaluate_change_dating(aoi_id: str, method: str):
@@ -19,16 +38,31 @@ def evaluate_change_dating(aoi_id: str, method: str):
 
 
 def plot_evaluation_change_dating(aoi_id: str, method: str):
+    dates = dataset_helpers.get_time_series(aoi_id)
     label = label_helpers.load_endtoend_label(aoi_id)
     pred = prediction_helpers.load_prediction(aoi_id, method, 'change_dating')
-
-    fig, axs = plt.subplots(1, 3, figsize=(20, 10))
-    visualization.plot_change_date(axs[0], label)
-    visualization.plot_change_date(axs[1], pred)
-    visualization.plot_change_data_bar(axs[2])
+    fig = plt.figure(figsize=(24, 8))
+    grid = plt.GridSpec(15, 3, wspace=0.2, hspace=0.5)
+    ax_gt = fig.add_subplot(grid[:-1, 0])
+    ax_gt.set_title('GT', fontsize=20)
+    ax_pred = fig.add_subplot(grid[:-1, 1])
+    ax_pred.set_title(f'Pred {method}', fontsize=20)
+    ax_error = fig.add_subplot(grid[:-1, 2])
+    ax_error.set_title('Model error', fontsize=20)
+    cbar_date = fig.add_subplot(grid[-1, :2])
+    cbar_error = fig.add_subplot(grid[-1, 2])
+    visualization.plot_change_date(ax_gt, label)
+    visualization.plot_change_date(ax_pred, pred)
+    visualization.plot_change_data_bar(cbar_date, dates)
+    visualization.plot_model_error(ax_error, method, aoi_id)
+    visualization.plot_model_error_bar(cbar_error)
     plt.show()
 
 
 if __name__ == '__main__':
     # evaluate_change_detection('L15-0331E-1257N_1327_3160_13', 'stepfunction')
-    plot_evaluation_change_dating('L15-0331E-1257N_1327_3160_13', 'stepfunction')
+    aoi_ids = dataset_helpers.load_aoi_selection()
+    for aoi_id in aoi_ids:
+        print(aoi_id)
+        plot_evaluation_change_dating(aoi_id, 'stepfunction')
+        # evaluate_change_detection(aoi_id, 'stepfunction')

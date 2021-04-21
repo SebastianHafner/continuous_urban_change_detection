@@ -1,9 +1,9 @@
 import numpy as np
 
 
-def compute_change_f1_score(y_pred: np.ndarray, y_true: np.ndarray) -> float:
-    p = compute_change_precision(y_pred, y_true)
-    r = compute_change_recall(y_pred, y_true)
+def compute_f1_score(y_pred: np.ndarray, y_true: np.ndarray) -> float:
+    p = compute_precision(y_pred, y_true)
+    r = compute_recall(y_pred, y_true)
     return 2 * (p * r) / (p + r)
 
 
@@ -19,13 +19,13 @@ def compute_false_negatives(y_pred: np.ndarray, y_true: np.ndarray):
     return int(np.sum(np.logical_and(np.logical_not(y_pred), y_true)))
 
 
-def compute_change_precision(y_pred: np.ndarray, y_true: np.ndarray) -> float:
+def compute_precision(y_pred: np.ndarray, y_true: np.ndarray) -> float:
     tp = compute_true_positives(y_pred, y_true)
     fp = compute_false_positives(y_pred, y_true)
     return float(tp / (tp + fp))
 
 
-def compute_change_recall(y_pred: np.ndarray, y_true: np.ndarray):
+def compute_recall(y_pred: np.ndarray, y_true: np.ndarray):
     tp = compute_true_positives(y_pred, y_true)
     fn = compute_false_negatives(y_pred, y_true)
     return float(tp / (tp + fn))

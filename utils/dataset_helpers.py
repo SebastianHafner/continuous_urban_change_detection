@@ -10,6 +10,12 @@ def dataset_path():
     return Path('/storage/shafner/continuous_urban_change_detection/spacenet7_s1s2_dataset')
 
 
+def load_aoi_selection():
+    file = Path.cwd() / 'aoi_selection.json'
+    selection = geofiles.load_json(file)
+    return selection
+
+
 def date2index(date: list) -> int:
     ref_value = 2019 * 12 + 1
     year, month = date
@@ -39,3 +45,8 @@ def get_geo(aoi_id: str) -> tuple:
     buildings_file = dataset_path() / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     _, transform, crs = geofiles.read_tif(buildings_file)
     return transform, crs
+
+
+def date2str(date: list):
+    year, month = date
+    return f'{year-2000:02d}-{month:02d}'

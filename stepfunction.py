@@ -62,6 +62,7 @@ def run_change_detection(config_name: str, aoi_id: str):
     probs_cube = prediction_helpers.generate_timeseries_prediction(config_name, aoi_id)
     model = StepFunctionModel()
     change_detection = np.zeros((probs_cube.shape[0], probs_cube.shape[1]), dtype=np.uint8)
+    model_error = np.zeros((probs_cube.shape[0], probs_cube.shape[1]), dtype=np.float32)
     n = change_detection.size
     f = 0
     print(change_detection.shape)
@@ -71,8 +72,8 @@ def run_change_detection(config_name: str, aoi_id: str):
         probs = probs_cube[i, j, :]
 
         model.fit(dates, probs)
-
         change_detection[index] = model.model + 2
+        model_error[index] = model.model_error(dates, probs)
         f += 1
         if f % 10_000 == 0:
             print(f'{f}/{n}')
@@ -88,7 +89,14 @@ def run_change_detection(config_name: str, aoi_id: str):
     change_date_file = save_path / f'pred_change_date_{aoi_id}.tif'
     geofiles.write_tif(change_date_file, change_detection, geotransform, crs)
 
+    model_error_file = save_path / f'model_error_{aoi_id}.tif'
+    geofiles.write_tif(model_error_file, model_error, geotransform, crs)
+
+
 if __name__ == '__main__':
     # run_stepfunction_on_label('L15-0331E-1257N_1327_3160_13')
     # run_stepfunction_on_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
-    run_change_detection('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
+
+    aoi_ids = dataset_helpers.load_aoi_selection()
+    for aoi_id in aoi_ids:
+        run_change_detection('fusionda_cons05_jaccardmorelikeloss', aoi_id)

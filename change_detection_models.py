@@ -19,9 +19,10 @@ class StepFunctionModel(object):
         return np.sum(np.square(y_hat - y)) / np.size(y)
 
     # root mean square error of model
-    def model_error(self, x_obs, y_obs) -> float:
-        y_pred = self.predict(x_obs)
-        return np.sqrt(self.mse(y_obs, y_pred))
+    def model_error(self, dates, probs) -> float:
+        assert(self.is_fitted())
+        y_pred = self.predict(dates)
+        return np.sqrt(self.mse(probs, y_pred))
 
     def fit(self, dates: list, probs: np.ndarray):
         x = np.arange(len(dates))
@@ -54,11 +55,27 @@ class StepFunctionModel(object):
 
 class DeepChangeVectorAnalysis(object):
 
-    def __init__(self):
+    def __init__(self, subset_features: bool = False, percentile: float = 0.8):
+        self.subset_features = subset_features
+        self.percentile = percentile
+
+    def detect_changes(self, features_t1: np.ndarray, features_t2: np.ndarray) -> np.ndarray:
+
+        if self.subset_features:
+            features_selection = self.get_feature_selection(features_t1, features_t2)
+            features_t1 = features_t1[:, :, features_selection]
+            features_t2 = features_t2[:, :, features_selection]
+
         pass
 
+    def get_feature_selection(self, features_t1: np.ndarray, features_t2: np.ndarray) -> np.ndarray:
+        diff = features_t2 - features_t1
+        var = np.var(diff, axis=(0, 1))
 
-class Thresholding(object):
+        # percentile
+
+
+class PostClassificationComparison(object):
 
     def __init__(self):
         pass

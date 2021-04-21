@@ -42,5 +42,15 @@ def get_prediction_in_timeseries(config_name: str, aoi_id: str, index: int) -> n
     return pred
 
 
+def get_features_in_timeseries(config_name: str, aoi_id: str, index: int) -> np.ndarray:
+    dates = dataset_helpers.get_time_series(aoi_id)
+    predictions_path = dataset_helpers.dataset_path() / aoi_id / config_name
+    year, month = dates[index]
+    pred_file = predictions_path / f'features_{aoi_id}_{year}_{month:02d}.tif'
+    features, _, _ = geofiles.read_tif(pred_file)
+    features = np.squeeze(features)
+    return features
+
+
 if __name__ == '__main__':
     predictions = generate_timeseries_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
