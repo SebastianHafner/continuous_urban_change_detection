@@ -1,9 +1,22 @@
 import numpy as np
+from skimage.filters import threshold_otsu, threshold_local
+from abc import ABC, abstractmethod
 
 
-class StepFunctionModel(object):
+class ChangeDetectionMethod(ABC):
 
     def __init__(self):
+        pass
+
+    @ abstractmethod
+    def detect_changes(self, input_t1: np.ndarray, input_t2: np.ndarray) -> np.ndarray:
+        pass
+
+
+class StepFunctionModel(ChangeDetectionMethod):
+
+    def __init__(self):
+        super().__init__()
         self.model = None
 
     @staticmethod
@@ -52,10 +65,16 @@ class StepFunctionModel(object):
     def is_fitted(self) -> bool:
         return False if self.model is None else True
 
+    def detect_changes(self, input_t1: np.ndarray, input_t2: np.ndarray) -> np.ndarray:
+        pass
 
-class DeepChangeVectorAnalysis(object):
 
-    def __init__(self, subset_features: bool = False, percentile: float = 0.8):
+class DeepChangeVectorAnalysis(ChangeDetectionMethod):
+
+    def __init__(self, thresholding_method: str = 'global_otsu', subset_features: bool = False,
+                 percentile: int = 90):
+        super().__init__()
+        self.thresholding_method = thresholding_method
         self.subset_features = subset_features
         self.percentile = percentile
 
@@ -66,16 +85,43 @@ class DeepChangeVectorAnalysis(object):
             features_t1 = features_t1[:, :, features_selection]
             features_t2 = features_t2[:, :, features_selection]
 
-        pass
+        # compute distance between feature vectors
+        magnitude = np.sqrt(np.sum(np.square(features_t2 - features_t1), axis=-1))
 
-    def get_feature_selection(self, features_t1: np.ndarray, features_t2: np.ndarray) -> np.ndarray:
+        # threshold
+        change = self.threshold(magnitude)
+        return change
+
+    def get_feature_selection(self, features_t1: np.ndarray, features_t2: np.ndarray) -> list:
         diff = features_t2 - features_t1
         var = np.var(diff, axis=(0, 1))
+        indices_sorted = list(np.argsort(var))[::-1]
 
         # percentile
+        n_features = diff.shape[-1]
+        n_selection = n_features // 100 * (100 - self.percentile)
+        return indices_sorted[:n_selection]
+
+    def threshold(self, arr: np.ndarray) -> np.ndarray:
+        if self.thresholding_method == 'local_adaptive':
+            block_size = 35
+            binary = threshold_local(arr, block_size, offset=10)
+        elif self.thresholding_method == 'global_otsu':
+            thresh = threshold_otsu(arr)
+            binary = arr > thresh
+        else:
+            raise Exception('Unknown thresholding method')
+        return binary.astype(np.uint8)
 
 
-class PostClassificationComparison(object):
+class PostClassificationComparison(ChangeDetectionMethod):
 
-    def __init__(self):
-        pass
+    def __init__(self, threshold: float = 0.5):
+        super().__init__()
+        self.threshold = threshold
+
+    def detect_changes(self, probs_t1: np.ndarray, probs_t2: np.ndarray) -> np.ndarray:
+        class_t1 = probs_t1 > self.threshold
+        class_t2 = probs_t2 > self.threshold
+        change = class_t1 != class_t2
+        return np.array(change).astype(np.uint8)

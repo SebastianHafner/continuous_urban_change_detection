@@ -45,8 +45,8 @@ def generate_timeseries_label(aoi_id: str) -> np.ndarray:
     return assembled_label
 
 
-def get_label_in_timeseries(aoi_id: str, index: int) -> np.ndarray:
-    dates = dataset_helpers.get_time_series(aoi_id)
+def get_label_in_timeseries(aoi_id: str, index: int, ignore_bad_data: bool = True) -> np.ndarray:
+    dates = dataset_helpers.get_time_series(aoi_id, ignore_bad_data)
     buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
     year, month = dates[index]
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
