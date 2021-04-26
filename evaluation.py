@@ -33,14 +33,12 @@ def evaluate_change_detection(aoi_id: str, method: str):
     print(f'Change: f1 score {f1_score:.3f} - precision {precision:.3f} - recall {recall:.3f}')
 
 
-def evaluate_change_dating(aoi_id: str, method: str):
-    pass
 
-
-def plot_evaluation_change_dating(aoi_id: str, method: str):
+def plot_change_detection_results(aoi_id: str, method: str):
     dates = dataset_helpers.get_time_series(aoi_id)
-    label = label_helpers.load_endtoend_label(aoi_id)
-    pred = prediction_helpers.load_prediction(aoi_id, method, 'change_dating')
+    change_date_label = label_helpers.generate_change_date_label(aoi_id)
+    change_date_pred = prediction_helpers.load_prediction(aoi_id, method, 'change_dating')
+
     fig = plt.figure(figsize=(24, 8))
     grid = plt.GridSpec(15, 3, wspace=0.2, hspace=0.5)
     ax_gt = fig.add_subplot(grid[:-1, 0])
@@ -51,8 +49,31 @@ def plot_evaluation_change_dating(aoi_id: str, method: str):
     ax_error.set_title('Model error', fontsize=20)
     cbar_date = fig.add_subplot(grid[-1, :2])
     cbar_error = fig.add_subplot(grid[-1, 2])
-    visualization.plot_change_date(ax_gt, label)
-    visualization.plot_change_date(ax_pred, pred)
+    visualization.plot_change_date(ax_gt, change_date_label, len(dates))
+    visualization.plot_change_date(ax_pred, change_date_pred, len(dates))
+    visualization.plot_change_data_bar(cbar_date, dates)
+    visualization.plot_model_error(ax_error, method, aoi_id)
+    visualization.plot_model_error_bar(cbar_error)
+    plt.show()
+
+
+def plot_change_dating_results(aoi_id: str, method: str):
+    dates = dataset_helpers.get_time_series(aoi_id)
+    change_date_label = label_helpers.generate_change_date_label(aoi_id)
+    change_date_pred = prediction_helpers.load_prediction(aoi_id, method, 'change_dating')
+
+    fig = plt.figure(figsize=(24, 8))
+    grid = plt.GridSpec(15, 3, wspace=0.2, hspace=0.5)
+    ax_gt = fig.add_subplot(grid[:-1, 0])
+    ax_gt.set_title('GT', fontsize=20)
+    ax_pred = fig.add_subplot(grid[:-1, 1])
+    ax_pred.set_title(f'Pred {method}', fontsize=20)
+    ax_error = fig.add_subplot(grid[:-1, 2])
+    ax_error.set_title('Model error', fontsize=20)
+    cbar_date = fig.add_subplot(grid[-1, :2])
+    cbar_error = fig.add_subplot(grid[-1, 2])
+    visualization.plot_change_date(ax_gt, change_date_label, len(dates))
+    visualization.plot_change_date(ax_pred, change_date_pred, len(dates))
     visualization.plot_change_data_bar(cbar_date, dates)
     visualization.plot_model_error(ax_error, method, aoi_id)
     visualization.plot_model_error_bar(cbar_error)
@@ -64,5 +85,5 @@ if __name__ == '__main__':
     aoi_ids = dataset_helpers.load_aoi_selection()
     for aoi_id in aoi_ids:
         print(aoi_id)
-        plot_evaluation_change_dating(aoi_id, 'stepfunction')
+        plot_change_dating_results(aoi_id, 'advancedstepfunction')
         # evaluate_change_detection(aoi_id, 'stepfunction')

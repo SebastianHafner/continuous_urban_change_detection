@@ -3,7 +3,7 @@ import scipy
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from utils import label_helpers, prediction_helpers, dataset_helpers, visualization, geofiles
-from change_detection_models import StepFunctionModel
+from change_detection_models import BasicStepFunctionModel, AdvancedStepFunctionModel
 from tqdm import tqdm
 
 
@@ -24,7 +24,7 @@ def run_stepfunction_on_label(aoi_id: str):
 
     dates = dataset_helpers.get_time_series(aoi_id)
 
-    model = StepFunctionModel()
+    model = BasicStepFunctionModel()
     model.fit(dates, probs)
     pred = model.predict(dates)
 
@@ -57,39 +57,43 @@ def run_stepfunction_on_prediction(config_name: str, aoi_id: str):
     plt.show()
 
 
-def run_change_detection(config_name: str, aoi_id: str):
+def test_stepfunction_model(config_name: str, aoi_id: str):
 
-    dates = dataset_helpers.get_time_series(aoi_id)
-    probs_cube = prediction_helpers.generate_timeseries_prediction(config_name, aoi_id)
-    model = StepFunctionModel()
-    change_detection = np.zeros((probs_cube.shape[0], probs_cube.shape[1]), dtype=np.uint8)
-    model_error = np.zeros((probs_cube.shape[0], probs_cube.shape[1]), dtype=np.float32)
-    n = change_detection.size
-    f = 0
-    print(change_detection.shape)
-    # TODO: maybe get rid of loop
-    for index, _ in np.ndenumerate(change_detection):
-        i, j = index
-        probs = probs_cube[i, j, :]
-
-        model.fit(dates, probs)
-        change_detection[index] = model.model + 2
-        model_error[index] = model.model_error(dates, probs)
-        f += 1
-        if f % 10_000 == 0:
-            print(f'{f}/{n}')
+    model = BasicStepFunctionModel(config_name)
 
     geotransform, crs = dataset_helpers.get_geo(aoi_id)
     save_path = dataset_helpers.root_path() / 'inference' / 'stepfunction'
     save_path.mkdir(exist_ok=True)
 
+    change = model.change_detection(aoi_id)
     change_file = save_path / f'pred_change_{aoi_id}.tif'
-    change = change_detection > 1
-    geofiles.write_tif(change_file, change.astype(np.uint8), geotransform, crs)
+    geofiles.write_tif(change_file, change, geotransform, crs)
 
+    change_date = model.change_dating(aoi_id)
     change_date_file = save_path / f'pred_change_date_{aoi_id}.tif'
-    geofiles.write_tif(change_date_file, change_detection, geotransform, crs)
+    geofiles.write_tif(change_date_file, change_date, geotransform, crs)
 
+    model_error = model.model_error(aoi_id)
+    model_error_file = save_path / f'model_error_{aoi_id}.tif'
+    geofiles.write_tif(model_error_file, model_error, geotransform, crs)
+
+
+def test_advanced_stepfunction_model(config_name: str, aoi_id: str):
+    model = AdvancedStepFunctionModel(config_name, max_error=0.25)
+
+    geotransform, crs = dataset_helpers.get_geo(aoi_id)
+    save_path = dataset_helpers.root_path() / 'inference' / 'advancedstepfunction'
+    save_path.mkdir(exist_ok=True)
+
+    change = model.change_detection(aoi_id)
+    change_file = save_path / f'pred_change_{aoi_id}.tif'
+    geofiles.write_tif(change_file, change, geotransform, crs)
+
+    change_date = model.change_dating(aoi_id)
+    change_date_file = save_path / f'pred_change_date_{aoi_id}.tif'
+    geofiles.write_tif(change_date_file, change_date, geotransform, crs)
+
+    model_error = model.model_error(aoi_id)
     model_error_file = save_path / f'model_error_{aoi_id}.tif'
     geofiles.write_tif(model_error_file, model_error, geotransform, crs)
 
@@ -99,5 +103,5 @@ if __name__ == '__main__':
     # run_stepfunction_on_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
 
     aoi_ids = dataset_helpers.load_aoi_selection()
-    for aoi_id in aoi_ids:
-        run_change_detection('fusionda_cons05_jaccardmorelikeloss', aoi_id)
+    for aoi_id in tqdm(aoi_ids):
+        test_advanced_stepfunction_model('fusionda_cons05_jaccardmorelikeloss', aoi_id)

@@ -5,7 +5,7 @@ import numpy as np
 
 
 # reading in geotiff file as numpy array
-def read_tif(file: Path):
+def read_tif(file: Path, first_band_only: bool = False):
     if not file.exists():
         raise FileNotFoundError(f'File {file} not found')
 
@@ -14,7 +14,10 @@ def read_tif(file: Path):
         transform = dataset.transform
         crs = dataset.crs
 
-    return arr.transpose((1, 2, 0)), transform, crs
+    arr = arr.transpose((1, 2, 0))
+    if first_band_only:
+        arr = arr[:, :, 0]
+    return arr, transform, crs
 
 
 # writing an array to a geo tiff file

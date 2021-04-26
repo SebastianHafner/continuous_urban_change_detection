@@ -1,14 +1,11 @@
-from change_detection_models import DeepChangeVectorAnalysis
+from change_detection_models import SimplifiedDeepChangeVectorAnalysis
 from utils import dataset_helpers, prediction_helpers, geofiles
 
 
 def run_dcva(config_name: str, aoi_id: str):
 
-    model = DeepChangeVectorAnalysis(subset_features=True)
-
-    features_first = prediction_helpers.get_features_in_timeseries(config_name, aoi_id, 0)
-    features_last = prediction_helpers.get_features_in_timeseries(config_name, aoi_id, -1)
-    change = model.detect_changes(features_first, features_last)
+    model = SimplifiedDeepChangeVectorAnalysis(config_name, subset_features=True)
+    change = model.change_detection(aoi_id)
     geotransform, crs = dataset_helpers.get_geo(aoi_id)
     cd_file = dataset_helpers.root_path() / 'inference' / 'dcva' / f'pred_{aoi_id}.tif'
     cd_file.parent.mkdir(exist_ok=True)

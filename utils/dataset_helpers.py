@@ -33,6 +33,11 @@ def get_time_series(aoi_id: str, ignore_bad_data: bool = True) -> list:
     return ts
 
 
+def length_time_series(aoi_id: str, ignore_bad_data: bool = True) -> int:
+    ts = get_time_series(aoi_id, ignore_bad_data=ignore_bad_data)
+    return len(ts)
+
+
 def get_all_ids() -> list:
     metadata_file = dataset_path() / 'metadata.json'
     metadata = geofiles.load_json(metadata_file)
