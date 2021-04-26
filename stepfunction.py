@@ -6,6 +6,7 @@ from utils import label_helpers, prediction_helpers, dataset_helpers, visualizat
 from change_detection_models import StepFunctionModel
 from tqdm import tqdm
 
+
 def run_stepfunction_on_label(aoi_id: str):
 
     # find a suitable pixel for time series analysis
