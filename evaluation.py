@@ -85,5 +85,5 @@ if __name__ == '__main__':
     aoi_ids = dataset_helpers.load_aoi_selection()
     for aoi_id in aoi_ids:
         print(aoi_id)
-        plot_change_dating_results(aoi_id, 'advancedstepfunction')
+        plot_change_dating_results(aoi_id, 'stepfunction')
         # evaluate_change_detection(aoi_id, 'stepfunction')

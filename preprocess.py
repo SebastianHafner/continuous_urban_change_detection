@@ -118,26 +118,7 @@ def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
     geofiles.write_json(output_file, data)
 
 
-def generate_endtoend_labels():
-    for aoi_id in tqdm(dataset_helpers.get_all_ids()):
-        endtoend_label = label_helpers.generate_endtoend_label(aoi_id)
-        geotransform, crs = dataset_helpers.get_geo(aoi_id)
-        output_file = dataset_helpers.dataset_path() / aoi_id / f'label_endtoend_{aoi_id}.tif'
-        geofiles.write_tif(output_file, endtoend_label, geotransform, crs)
-
-
-def generate_change_labels():
-    for aoi_id in tqdm(dataset_helpers.get_all_ids()):
-        label_start = label_helpers.get_label_in_timeseries(aoi_id, 0) > 0
-        label_end = label_helpers.get_label_in_timeseries(aoi_id, -1) > 0
-        change_label = label_start != label_end
-        geotransform, crs = dataset_helpers.get_geo(aoi_id)
-        output_file = dataset_helpers.dataset_path() / aoi_id / f'label_change_{aoi_id}.tif'
-        geofiles.write_tif(output_file, change_label.astype(np.uint8), geotransform, crs)
-
-
 if __name__ == '__main__':
     # assemble_buildings('train')
-    # generate_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
-    # generate_endtoend_labels()
-    generate_change_labels()
+    generate_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
+

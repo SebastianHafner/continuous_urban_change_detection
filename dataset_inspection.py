@@ -68,8 +68,8 @@ def visualize_first_and_last_optical(aoi_id: str, save_plot: bool = False):
 
 if __name__ == '__main__':
     for aoi_id in dataset_helpers.get_all_ids():
-        print(aoi_id)
+        # print(aoi_id)
         # visualize_first_and_last_optical(aoi_id, save_plot=True)
         visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
                               include_f1_score=True, save_plot=True)
-    # visualize_construction('L15-0331E-1257N_1327_3160_13')
+        pass
