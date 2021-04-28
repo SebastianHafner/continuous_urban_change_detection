@@ -8,7 +8,7 @@ def generate_timeseries_label(aoi_id: str) -> np.ndarray:
     dates = dataset_helpers.get_time_series(aoi_id)
     buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
     label_cube = None
-    for i, (year, month) in enumerate(dates):
+    for i, (year, month, mask) in enumerate(dates):
         label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
         label, _, _ = geofiles.read_tif(label_file, first_band_only=True)
         label = label > 0
@@ -66,7 +66,7 @@ def load_endtoend_label(aoi_id: str) -> np.ndarray:
 def get_label_in_timeseries(aoi_id: str, index: int, ignore_bad_data: bool = True) -> np.ndarray:
     dates = dataset_helpers.get_time_series(aoi_id, ignore_bad_data)
     buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
-    year, month = dates[index]
+    year, month, _ = dates[index]
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
     label = np.squeeze(label)

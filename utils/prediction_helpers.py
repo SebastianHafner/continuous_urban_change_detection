@@ -35,7 +35,7 @@ def load_prediction(aoi_id: str, method: str, prediction_type: str):
 def get_prediction_in_timeseries(config_name: str, aoi_id: str, index: int, ignore_bad_data: bool = True) -> np.ndarray:
     dates = dataset_helpers.get_time_series(aoi_id, ignore_bad_data)
     predictions_path = dataset_helpers.dataset_path() / aoi_id / config_name
-    year, month = dates[index]
+    year, month, _ = dates[index]
     pred_file = predictions_path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
     pred, _, _ = geofiles.read_tif(pred_file)
     pred = np.squeeze(pred)

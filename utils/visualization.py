@@ -31,6 +31,8 @@ class DateColorMap(object):
 
 def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color', scale_factor: float = 0.4):
     file = dataset_helpers.dataset_path() / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+    if not file.exists():
+        return
     img, _, _ = geofiles.read_tif(file)
     band_indices = [2, 1, 0] if vis == 'true_color' else [6, 2, 1]
     bands = img[:, :, band_indices] / scale_factor
@@ -42,6 +44,8 @@ def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color'
 
 def plot_sar(ax, aoi_id: str, year: int, month: int, vis: str = 'VV'):
     file = dataset_helpers.dataset_path() / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+    if not file.exists():
+        return
     img, _, _ = geofiles.read_tif(file)
     band_index = 0 if vis == 'VV' else 1
     bands = img[:, :, band_index]
@@ -53,6 +57,8 @@ def plot_sar(ax, aoi_id: str, year: int, month: int, vis: str = 'VV'):
 
 def plot_buildings(ax, aoi_id: str, year: int, month: int):
     file = dataset_helpers.dataset_path() / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
+    if not file.exists():
+        return
     img, _, _ = geofiles.read_tif(file)
     img = img > 0
     img = img if len(img.shape) == 2 else img[:, :, 0]

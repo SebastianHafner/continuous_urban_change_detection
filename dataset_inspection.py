@@ -7,15 +7,15 @@ from tqdm import tqdm
 
 def visualize_time_series(aoi_id: str, config_name: str = None, include_f1_score: bool = False,
                           save_plot: bool = False):
-    all_dates = dataset_helpers.get_time_series(aoi_id, ignore_bad_data=False)
-    clear_dates = dataset_helpers.get_time_series(aoi_id, ignore_bad_data=True)
-    n = len(all_dates)
+    ts_complete = dataset_helpers.get_time_series(aoi_id, ignore_bad_data=False)
+    ts_clear = dataset_helpers.get_time_series(aoi_id, ignore_bad_data=True)
+    n = len(ts_complete)
     n_rows = 3 if config_name is None else 4
     plot_size = 3
 
     fig, axs = plt.subplots(n_rows, n, figsize=(n * plot_size, n_rows * plot_size))
 
-    for i, (year, month) in enumerate(tqdm(all_dates)):
+    for i, (year, month, mask) in enumerate(tqdm(ts_complete)):
         visualization.plot_sar(axs[0, i], aoi_id, year, month)
         visualization.plot_optical(axs[1, i], aoi_id, year, month)
         visualization.plot_buildings(axs[2, i], aoi_id, year, month)
@@ -28,12 +28,15 @@ def visualize_time_series(aoi_id: str, config_name: str = None, include_f1_score
             f1_score = metrics.compute_f1_score(pred, label)
             title += f' (F1 {f1_score:.2f})'
 
-        color = 'k' if [year, month] in clear_dates else 'red'
+        if [year, month, mask] in ts_clear:
+            color = 'green' if not mask else 'blue'
+        else:
+            color = 'orange' if not mask else 'red'
+
         axs[0, i].set_title(title, c=color, fontsize=18, fontweight='bold')
 
         if config_name is not None:
             visualization.plot_prediction(axs[3, i], config_name, aoi_id, year, month)
-
 
 
     if not save_plot:
@@ -67,9 +70,9 @@ def visualize_first_and_last_optical(aoi_id: str, save_plot: bool = False):
 
 
 if __name__ == '__main__':
-    for aoi_id in dataset_helpers.get_all_ids():
-        # print(aoi_id)
+    for i, aoi_id in enumerate(dataset_helpers.get_all_ids()):
+        print(f'{i}: {aoi_id}')
         # visualize_first_and_last_optical(aoi_id, save_plot=True)
         visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
-                              include_f1_score=True, save_plot=True)
+                              include_f1_score=True, save_plot=False)
         pass

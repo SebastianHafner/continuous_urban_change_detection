@@ -20,9 +20,6 @@ def get_date(label_file: Path) -> tuple:
 def has_mask(dataset: str, site_name: str, year: int, month: int) -> bool:
     mask_path = ROOT_PATH / 'spacenet7' / dataset / site_name / 'UDM_masks'
     mask_file = mask_path / f'global_monthly_{year}_{month:02d}_mosaic_{site_name}_UDM.tif'
-    if site_name == 'L15-1335E-1166N_5342_3524_13':
-        print(mask_file.name)
-        print(mask_file.exists())
     return mask_file.exists()
 
 
@@ -94,7 +91,10 @@ def assemble_buildings(dataset: str):
 
 def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
     root_path = path_to_spacenet7_s1s2_dataset
-    site_paths = [f for f in root_path.iterdir() if f.is_dir()]
+    timestamps_file = ROOT_PATH / 'spacenet7' / 'sn7_timestamps.csv'
+    df = pd.read_csv(timestamps_file)
+
+    missing_aois = geofiles.load_json(Path('missing_aois.json'))
 
     data = {
         's1_bands': ['VV', 'VH'],
@@ -102,17 +102,21 @@ def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
         'sites': {}
     }
 
-    for site_path in site_paths:
+    for index, row in df.iterrows():
+        aoi_id = row['aoi_id']
+        aoi_data = [int(row['year']), int(row['month']), row['mask']]
 
-        s1_path = site_path / 'sentinel1'
-        s1_files = [f for f in s1_path.glob('**/*')]
+        if aoi_id in missing_aois:
+            continue
 
-        months = [int(s1_file.stem.split('_')[-1]) for s1_file in s1_files]
-        years = [int(s1_file.stem.split('_')[-2]) for s1_file in s1_files]
-        dates = [(year, month) for year, month in zip(years, months)]
-        dates = sorted(dates, key=lambda date: date[0] * 12 + date[1])
+        if aoi_id not in data['sites'].keys():
+            data['sites'][aoi_id] = []
+        data['sites'][aoi_id].append(aoi_data)
 
-        data['sites'][site_path.name] = dates
+    for aoi_id in data['sites'].keys():
+        aoi_data = data['sites'][aoi_id]
+        aoi_data = sorted(aoi_data, key=lambda date: date[0] * 12 + date[1])
+        data['sites'][aoi_id] = aoi_data
 
     output_file = root_path / f'metadata.json'
     geofiles.write_json(output_file, data)
