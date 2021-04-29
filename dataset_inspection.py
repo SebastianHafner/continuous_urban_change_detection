@@ -72,7 +72,8 @@ def visualize_first_and_last_optical(aoi_id: str, save_plot: bool = False):
 if __name__ == '__main__':
     for i, aoi_id in enumerate(dataset_helpers.get_all_ids()):
         print(f'{i}: {aoi_id}')
-        # visualize_first_and_last_optical(aoi_id, save_plot=True)
-        visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
-                              include_f1_score=True, save_plot=False)
+        if i > 29:
+            # visualize_first_and_last_optical(aoi_id, save_plot=True)
+            visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
+                                  include_f1_score=True, save_plot=True)
         pass
