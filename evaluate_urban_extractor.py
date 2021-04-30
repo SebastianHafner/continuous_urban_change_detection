@@ -25,12 +25,12 @@ def run_urban_extractor_evaluation(config_name: str, aoi_id: str):
 
 
 # https://stackoverflow.com/questions/22364565/python-pylab-scatter-plot-error-bars-the-error-on-each-point-is-unique
-def show_urban_extraction_evaluation(config_name: str):
+def show_precision_recall_evaluation(config_name: str):
 
     mean_f1, mean_p, mean_r = [], [], []
     std_f1, std_p, std_r = [], [], []
 
-    aoi_ids = dataset_helpers.load_aoi_selection()
+    aoi_ids = dataset_helpers.get_all_ids()
     for aoi_id in tqdm(aoi_ids):
         length_ts = dataset_helpers.length_time_series(aoi_id)
         f1_scores, precisions, recalls = [], [], []
@@ -68,10 +68,42 @@ def show_urban_extraction_evaluation(config_name: str):
     plt.show()
 
 
+def show_f1_evaluation(config_name: str):
+
+    data = []
+
+    aoi_ids = dataset_helpers.get_all_ids()
+    for aoi_id in tqdm(aoi_ids):
+        length_ts = dataset_helpers.length_time_series(aoi_id)
+        f1_scores, precisions, recalls = [], [], []
+
+        for i in range(length_ts):
+            label = label_helpers.get_label_in_timeseries(aoi_id, i)
+            pred = prediction_helpers.get_prediction_in_timeseries(config_name, aoi_id, i)
+            pred = pred > 0.5
+            f1_scores.append(metrics.compute_f1_score(pred, label))
+
+        data.append([aoi_id, f1_scores])
+
+    data = sorted(data, key=lambda x: np.mean(x[1]))
+    data_boxplots = [d[1] for d in data]
+
+    fontsize = 20
+    fig, ax = plt.subplots(1, 1, figsize=(len(aoi_ids), 10))
+    ax.boxplot(data_boxplots, whis=(0, 100))
+    x_ticks = np.arange(len(data)) + 1
+    x_tick_labels = [d[0][4:15] for d in data]
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels(x_tick_labels, rotation=90, fontsize=fontsize)
+    ax.set_ylabel('F1 score', fontsize=fontsize)
+    ax.set_ylim((0, 1))
+    plt.show()
+
+
 if __name__ == '__main__':
     config_name = 'fusionda_cons05_jaccardmorelikeloss'
     for aoi_id in dataset_helpers.load_aoi_selection():
         # run_urban_extractor_evaluation(config_name, aoi_id)
         pass
 
-    show_urban_extraction_evaluation(config_name)
+    show_f1_evaluation(config_name)
