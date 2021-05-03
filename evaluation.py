@@ -82,7 +82,7 @@ def plot_change_dating_results(aoi_id: str, method: str):
 
 if __name__ == '__main__':
     # evaluate_change_detection('L15-0331E-1257N_1327_3160_13', 'stepfunction')
-    aoi_ids = dataset_helpers.load_aoi_selection()
+    aoi_ids = dataset_helpers.get_all_ids()
     for aoi_id in aoi_ids:
         print(aoi_id)
         plot_change_dating_results(aoi_id, 'stepfunction')
