@@ -24,7 +24,7 @@ def has_mask(dataset: str, site_name: str, year: int, month: int) -> bool:
 
 
 # creates data frame with columns: aoi_id; year; month; mask
-def assemble_metadata(dataset: str):
+def assemble_spacenet7_metadata(dataset: str):
     sn7_path = ROOT_PATH / 'spacenet7'
     dataset_path = sn7_path / dataset
     data = {'aoi_id': [], 'year': [], 'month': [], 'mask': []}
@@ -56,7 +56,7 @@ def assemble_metadata(dataset: str):
 
 
 # merges buildings from a time series for a site into one geojson file
-def assemble_buildings(dataset: str):
+def assemble_spacenet7_buildings(dataset: str):
     sn7_path = ROOT_PATH / 'spacenet7'
     dataset_path = sn7_path / dataset
     site_paths = [f for f in dataset_path.iterdir() if f.is_dir()]
@@ -89,7 +89,7 @@ def assemble_buildings(dataset: str):
         geofiles.write_json(output_file, all_buildings)
 
 
-def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
+def generate_spacenet7_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
     root_path = path_to_spacenet7_s1s2_dataset
     timestamps_file = ROOT_PATH / 'spacenet7' / 'sn7_timestamps.csv'
     df = pd.read_csv(timestamps_file)
@@ -122,7 +122,33 @@ def generate_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
     geofiles.write_json(output_file, data)
 
 
+def generate_oscd_dataset_file(path_to_oscd_multitemporal_dataset: Path):
+    root_path = path_to_oscd_multitemporal_dataset
+    aoi_ids = [f.stem for f in root_path.iterdir() if f.is_dir()]
+
+    data = {
+        's1_bands': ['VV', 'VH'],
+        's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
+        'sites': {}
+    }
+
+    def filename2date(filename: Path) -> tuple:
+        _, _, year, month, *_ = filename.stem.split('_')
+        return int(year), int(month), False
+
+    for index, aoi_id in enumerate(aoi_ids):
+
+        path_files = root_path / aoi_id / 'sentinel2'
+        dates = [filename2date(f) for f in path_files.glob('**/*') if f.is_file()]
+        dates = sorted(dates, key=lambda x: x[0] * 12 + x[1])
+
+        data['sites'][aoi_id] = dates
+
+    output_file = root_path / f'metadata.json'
+    geofiles.write_json(output_file, data)
+
+
 if __name__ == '__main__':
     # assemble_buildings('train')
-    generate_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
-
+    # generate_spacenet7_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
+    generate_oscd_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'oscd_multitemporal_dataset')

@@ -5,10 +5,41 @@ import numpy as np
 from tqdm import tqdm
 
 
-def visualize_time_series(aoi_id: str, config_name: str = None, include_f1_score: bool = False,
+def visualize_satellite_data(dataset: str, aoi_id: str, save_plot: bool = False):
+    ts_complete = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=False)
+    ts_clear = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=True)
+    n = len(ts_complete)
+    n_rows = 2
+    plot_size = 3
+
+    fig, axs = plt.subplots(n_rows, n, figsize=(n * plot_size, n_rows * plot_size))
+
+    for i, (year, month, mask) in enumerate(tqdm(ts_complete)):
+        visualization.plot_sar(axs[0, i], dataset, aoi_id, year, month)
+        visualization.plot_optical(axs[1, i], dataset, aoi_id, year, month)
+
+        title = f'{year}-{month:02d}'
+
+        if [year, month, mask] in ts_clear:
+            color = 'green' if not mask else 'blue'
+        else:
+            color = 'orange' if not mask else 'red'
+
+        axs[0, i].set_title(title, c=color, fontsize=16, fontweight='bold')
+
+    if not save_plot:
+        plt.show()
+    else:
+        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / f'satellite_data_{aoi_id}.png'
+        output_file.parent.mkdir(exist_ok=True)
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+
+def visualize_time_series(dataset: str, aoi_id: str, config_name: str = None, include_f1_score: bool = False,
                           save_plot: bool = False):
-    ts_complete = dataset_helpers.get_time_series(aoi_id, ignore_bad_data=False)
-    ts_clear = dataset_helpers.get_time_series(aoi_id, ignore_bad_data=True)
+    ts_complete = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=False)
+    ts_clear = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=True)
     n = len(ts_complete)
     n_rows = 3 if config_name is None else 4
     plot_size = 3
@@ -33,7 +64,7 @@ def visualize_time_series(aoi_id: str, config_name: str = None, include_f1_score
         else:
             color = 'orange' if not mask else 'red'
 
-        axs[0, i].set_title(title, c=color, fontsize=18, fontweight='bold')
+        axs[0, i].set_title(title, c=color, fontsize=16, fontweight='bold')
 
         if config_name is not None:
             visualization.plot_prediction(axs[3, i], config_name, aoi_id, year, month)
@@ -70,9 +101,10 @@ def visualize_first_and_last_optical(aoi_id: str, save_plot: bool = False):
 
 
 if __name__ == '__main__':
-    for i, aoi_id in enumerate(dataset_helpers.get_all_ids()):
-        print(f'{i}: {aoi_id}')
-        # visualize_first_and_last_optical(aoi_id, save_plot=True)
-        visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
-                              include_f1_score=True, save_plot=True)
-        pass
+    # for i, aoi_id in enumerate(dataset_helpers.get_all_ids()):
+    #     print(f'{i}: {aoi_id}')
+    #     # visualize_first_and_last_optical(aoi_id, save_plot=True)
+    #     visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
+    #                           include_f1_score=True, save_plot=True)
+    #     pass
+    visualize_satellite_data('oscd_multitemporal_dataset', 'nantes', save_plot=False)

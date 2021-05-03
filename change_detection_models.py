@@ -22,13 +22,14 @@ class ChangeDetectionMethod(ABC):
 
 class BasicStepFunctionModel(ChangeDetectionMethod):
 
-    def __init__(self, config_name):
+    def __init__(self, config_name: str, n_stable: int = 2):
         super().__init__(config_name)
         self.fitted_aoi = None
         # index when changed occurred in the time series
         # (no change is index 0 and length_ts for non-urban and urban, respectively)
         self.cached_fit = None
         self.length_ts = None
+        self.n_stable = n_stable
 
     @staticmethod
     def _nochange_function(x: np.ndarray, return_value: float) -> np.ndarray:
@@ -54,29 +55,35 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
         data_shape = probs_cube.shape
 
         # fitting stable functions
-        y_pred_nochange_nourban = np.zeros(data_shape)
-        mse_nochange_nourban = self._mse(probs_cube, y_pred_nochange_nourban)
-        y_pred_nochange_urban = np.ones(data_shape)
-        mse_nochange_urban = self._mse(probs_cube, y_pred_nochange_urban)
-        errors = [mse_nochange_nourban]
+        stable_values = np.linspace(0, 1, self.n_stable)
+        errors_stable = []
+        for stable_value in stable_values:
+            y_pred_nochange = np.full(data_shape, fill_value=stable_value)
+            mse_nochange = self._mse(probs_cube, y_pred_nochange)
+            errors_stable.append(mse_nochange)
+        errors_stable = np.stack(errors_stable)
+        min_error_stable = np.min(errors_stable, axis=0)
 
         # fitting step functions
+        errors_change = []
         for x0 in range(1, self.length_ts):
             y_pred_change = np.zeros(data_shape)
             y_pred_change[:, :, x0:] = 1
             mse_change = self._mse(probs_cube, y_pred_change)
-            errors.append(mse_change)
-        errors.append(mse_nochange_urban)
+            errors_change.append(mse_change)
+        errors_change = np.stack(errors_change)
+        min_index_change = np.argmin(errors_change, axis=0)
+        min_error_change = np.min(errors_change, axis=0)
 
-        errors = np.stack(errors)
-        self.cached_fit = np.argmin(errors, axis=0)
+        pixels_stable = np.array(min_error_stable < min_error_change)
+        self.cached_fit = np.where(pixels_stable, np.zeros(pixels_stable.shape, dtype=np.uint8), min_index_change + 1)
         self.fitted_aoi = aoi_id
 
     def _predict(self, aoi_id: str) -> np.ndarray:
         self._fit(aoi_id)
         y_pred = np.zeros((*self.cached_fit.shape, self.length_ts), dtype=np.uint8)
         # TODO: this one is probably redundant because 0 initialization
-        y_pred[self.cached_fit == 0, ] = 0
+        y_pred[self.cached_fit == 0,] = 0
         y_pred[self.cached_fit == self.length_ts] = 1
         for x0 in range(1, self.length_ts):
             bool_arr = self.cached_fit == x0
@@ -103,6 +110,10 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
         change_date = self.cached_fit.copy()
         change_date[change_date == self.length_ts] = 0
         return np.array(change_date).astype(np.uint8)
+
+    # also returns whether a stable pixels is urban or non-urban
+    def change_dating_plus(self, aoi_id: str) -> tuple:
+        pass
 
 
 class AdvancedStepFunctionModel(BasicStepFunctionModel):

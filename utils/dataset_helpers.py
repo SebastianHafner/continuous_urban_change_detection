@@ -22,12 +22,12 @@ def date2index(date: list) -> int:
     return year * 12 + month - ref_value
 
 
-def get_time_series(aoi_id: str, ignore_bad_data: bool = True) -> list:
-    metadata_file = dataset_path() / 'metadata.json'
+def get_time_series(dataset: str, aoi_id: str, ignore_bad_data: bool = True) -> list:
+    metadata_file = root_path() / dataset / 'metadata.json'
     metadata = geofiles.load_json(metadata_file)
     time_series = metadata['sites'][aoi_id]
     if ignore_bad_data:
-        bad_data_file = Path.cwd() / 'bad_data.json'
+        bad_data_file = Path.cwd() / f'bad_data_{dataset}.json'
         bad_data = geofiles.load_json(bad_data_file)
         time_series = [ts for ts in time_series if not [ts[0], ts[1]] in bad_data[aoi_id]]
     return time_series

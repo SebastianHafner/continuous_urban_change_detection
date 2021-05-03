@@ -8,7 +8,7 @@ def generate_timeseries_prediction(config_name: str, aoi_id: str) -> np.ndarray:
     predictions_path = dataset_helpers.dataset_path() / aoi_id / config_name
     n = len(dates)
     prediction_ts = None
-    for i, (year, month) in enumerate(dates):
+    for i, (year, month, _) in enumerate(dates):
         pred_file = predictions_path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
         pred, _, _ = geofiles.read_tif(pred_file)
         pred = np.squeeze(pred)

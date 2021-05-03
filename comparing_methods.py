@@ -56,9 +56,15 @@ if __name__ == '__main__':
     dcva_model = cd_models.SimplifiedDeepChangeVectorAnalysis(config_name)
     pc_model = cd_models.PostClassificationComparison(config_name)
     step_model = cd_models.BasicStepFunctionModel(config_name)
+    imp_step_model = cd_models.ImprovedBasicStepFunctionModel(config_name, n_stable=2)
     adv_step_model = cd_models.AdvancedStepFunctionModel(config_name)
-    model_comparison = [dcva_model, step_model, adv_step_model]
-    model_names = ['DCVA (simplified)', 'Post-classification', 'Step function (refined)']
+
+    # model_comparison = [step_model, imp_step_model]
+    # model_names = ['step', 'imp step']
+
+
+    # model_comparison = [dcva_model, step_model, adv_step_model]
+    # model_names = ['DCVA (simplified)', 'Post-classification', 'Step function (refined)']
 
     for aoi_id in dataset_helpers.load_aoi_selection():
         print(aoi_id)

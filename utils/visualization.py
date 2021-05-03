@@ -29,8 +29,9 @@ class DateColorMap(object):
         return self.ts_length
 
 
-def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color', scale_factor: float = 0.4):
-    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'true_color',
+                 scale_factor: float = 0.4):
+    file = dataset_helpers.root_path() / dataset / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -42,8 +43,8 @@ def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color'
     ax.set_yticks([])
 
 
-def plot_sar(ax, aoi_id: str, year: int, month: int, vis: str = 'VV'):
-    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'VV'):
+    file = dataset_helpers.root_path() / dataset / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -67,8 +68,8 @@ def plot_buildings(ax, aoi_id: str, year: int, month: int):
     ax.set_yticks([])
 
 
-def plot_prediction(ax, config_name: str, aoi_id: str, year: int, month: int):
-    file = dataset_helpers.dataset_path() / aoi_id / config_name / f'pred_{aoi_id}_{year}_{month:02d}.tif'
+def plot_prediction(ax, dataset: str, config_name: str, aoi_id: str, year: int, month: int):
+    file = dataset_helpers.root_path() / dataset / aoi_id / config_name / f'pred_{aoi_id}_{year}_{month:02d}.tif'
     img, _, _ = geofiles.read_tif(file)
     img = img if len(img.shape) == 2 else img[:, :, 0]
     ax.imshow(img, cmap='gray', vmin=0, vmax=1)
