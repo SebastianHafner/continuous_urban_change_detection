@@ -133,8 +133,8 @@ def generate_oscd_dataset_file(path_to_oscd_multitemporal_dataset: Path):
     }
 
     def filename2date(filename: Path) -> tuple:
-        _, _, year, month, *_ = filename.stem.split('_')
-        return int(year), int(month), False
+        parts = filename.stem.split('_')
+        return int(parts[-2]), int(parts[-1]), False
 
     for index, aoi_id in enumerate(aoi_ids):
 

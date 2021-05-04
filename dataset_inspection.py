@@ -30,7 +30,7 @@ def visualize_satellite_data(dataset: str, aoi_id: str, save_plot: bool = False)
     if not save_plot:
         plt.show()
     else:
-        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / f'satellite_data_{aoi_id}.png'
+        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset / f'satellite_data_{aoi_id}.png'
         output_file.parent.mkdir(exist_ok=True)
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
@@ -107,4 +107,5 @@ if __name__ == '__main__':
     #     visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
     #                           include_f1_score=True, save_plot=True)
     #     pass
-    visualize_satellite_data('oscd_multitemporal_dataset', 'nantes', save_plot=False)
+    for aoi_id in dataset_helpers.get_all_ids('oscd_multitemporal_dataset'):
+        visualize_satellite_data('oscd_multitemporal_dataset', aoi_id, save_plot=True)
