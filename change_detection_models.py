@@ -6,24 +6,26 @@ from utils import prediction_helpers, dataset_helpers
 
 class ChangeDetectionMethod(ABC):
 
-    def __init__(self, config_name: str):
+    def __init__(self, name: str, config_name: str):
+        self.name = name
         self.config_name = config_name
 
     @ abstractmethod
     # returns binary array of changes
-    def change_detection(self, aoi_id: str) -> np.ndarray:
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
     @ abstractmethod
     # returns int array where numbers correspond to change date (index in dates list)
-    def change_dating(self, aoi_id: str) -> np.ndarray:
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
 
 class BasicStepFunctionModel(ChangeDetectionMethod):
 
     def __init__(self, config_name: str, n_stable: int = 2):
-        super().__init__(config_name)
+        super().__init__('stepfunction', config_name)
+        self.fitted_dataset = None
         self.fitted_aoi = None
         # index when changed occurred in the time series
         # (no change is index 0 and length_ts for non-urban and urban, respectively)
@@ -43,15 +45,15 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
     def _mse(y: np.ndarray, y_hat: np.ndarray) -> float:
         return np.sum(np.square(y_hat - y), axis=-1) / y.shape[-1]
 
-    def _fit(self, aoi_id: str):
+    def _fit(self, dataset: str, aoi_id: str):
         # fit model to aoi id if it's not fit to it
-        if self.fitted_aoi == aoi_id:
+        if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
             return
 
-        dates = dataset_helpers.get_time_series(aoi_id)
+        dates = dataset_helpers.get_time_series(dataset, aoi_id)
         self.length_ts = len(dates)
 
-        probs_cube = prediction_helpers.generate_timeseries_prediction(self.config_name, aoi_id)
+        probs_cube = prediction_helpers.generate_timeseries_prediction(self.config_name, dataset, aoi_id)
         data_shape = probs_cube.shape
 
         # fitting stable functions
@@ -77,13 +79,15 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
 
         pixels_stable = np.array(min_error_stable < min_error_change)
         self.cached_fit = np.where(pixels_stable, np.zeros(pixels_stable.shape, dtype=np.uint8), min_index_change + 1)
+
+        self.fitted_dataset = dataset
         self.fitted_aoi = aoi_id
 
-    def _predict(self, aoi_id: str) -> np.ndarray:
-        self._fit(aoi_id)
+    def _predict(self, dataset, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
         y_pred = np.zeros((*self.cached_fit.shape, self.length_ts), dtype=np.uint8)
         # TODO: this one is probably redundant because 0 initialization
-        y_pred[self.cached_fit == 0,] = 0
+        y_pred[self.cached_fit == 0, ] = 0
         y_pred[self.cached_fit == self.length_ts] = 1
         for x0 in range(1, self.length_ts):
             bool_arr = self.cached_fit == x0
@@ -91,22 +95,22 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
         return y_pred
 
     # root mean square error of model
-    def model_error(self, aoi_id: str) -> float:
-        self._fit(aoi_id)
-        y_pred = self._predict(aoi_id)
-        probs = prediction_helpers.generate_timeseries_prediction(self.config_name, aoi_id)
+    def model_error(self, dataset: str, aoi_id: str) -> float:
+        self._fit(dataset, aoi_id)
+        y_pred = self._predict(dataset, aoi_id)
+        probs = prediction_helpers.generate_timeseries_prediction(self.config_name, dataset, aoi_id)
         return np.sqrt(self._mse(probs, y_pred))
 
-    def change_detection(self, aoi_id: str) -> np.ndarray:
-        self._fit(aoi_id)
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
 
         # convert to change date product to change detection (0 and length_ts is no change)
         change = np.logical_and(self.cached_fit != 0, self.cached_fit != self.length_ts)
 
         return np.array(change).astype(np.uint8)
 
-    def change_dating(self, aoi_id: str) -> np.ndarray:
-        self._fit(aoi_id)
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
         change_date = self.cached_fit.copy()
         change_date[change_date == self.length_ts] = 0
         return np.array(change_date).astype(np.uint8)
@@ -116,23 +120,24 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
         pass
 
 
-class AdvancedStepFunctionModel(BasicStepFunctionModel):
+class ImprovedStepFunctionModel(BasicStepFunctionModel):
 
     def __init__(self, config_name, max_error: float = 0.25):
         super().__init__(config_name)
+        self.name = 'improvedstepfunction'
         self.max_error = max_error
 
-    def change_detection(self, aoi_id: str) -> np.ndarray:
-        self._fit(aoi_id)
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
 
         # convert to change date product to change detection (0 and length_ts is no change)
         change = np.logical_and(self.cached_fit != 0, self.cached_fit != self.length_ts)
-        model_error = self.model_error(aoi_id)
+        model_error = self.model_error(dataset, aoi_id)
         change[model_error > self.max_error] = 0
 
         return np.array(change).astype(np.uint8)
 
-    def change_dating(self, aoi_id: str) -> np.ndarray:
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
         self._fit(aoi_id)
         change_date = self.cached_fit.copy()
         change_date[change_date == self.length_ts] = 0
@@ -147,7 +152,7 @@ class SimplifiedDeepChangeVectorAnalysis(ChangeDetectionMethod):
 
     def __init__(self, config_name: str, thresholding_method: str = 'global_otsu', subset_features: bool = False,
                  percentile: int = 90):
-        super().__init__(config_name)
+        super().__init__('dcva', config_name)
         self.thresholding_method = thresholding_method
         self.subset_features = subset_features
         self.percentile = percentile
@@ -197,13 +202,13 @@ class SimplifiedDeepChangeVectorAnalysis(ChangeDetectionMethod):
 class PostClassificationComparison(ChangeDetectionMethod):
 
     def __init__(self, config_name: str, threshold: float = 0.5, ignore_negative_changes: bool = False):
-        super().__init__(config_name)
+        super().__init__('postclassification', config_name)
         self.threshold = threshold
         self.ignore_negative_changes = ignore_negative_changes
 
-    def change_detection(self, aoi_id: str) -> np.ndarray:
-        probs_start = prediction_helpers.get_prediction_in_timeseries(self.config_name, aoi_id, 0)
-        probs_end = prediction_helpers.get_prediction_in_timeseries(self.config_name, aoi_id, -1)
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        probs_start = prediction_helpers.get_prediction_in_timeseries(self.config_name, dataset, aoi_id, 0)
+        probs_end = prediction_helpers.get_prediction_in_timeseries(self.config_name, dataset, aoi_id, -1)
         class_start = probs_start > self.threshold
         class_end = probs_end > self.threshold
         if self.ignore_negative_changes:
@@ -213,7 +218,7 @@ class PostClassificationComparison(ChangeDetectionMethod):
             change = class_start != class_end
         return np.array(change).astype(np.uint8)
 
-    def change_dating(self, aoi_id: str) -> np.ndarray:
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
 if __name__ == '__main__':

@@ -38,7 +38,7 @@ def generate_endtoend_label(aoi_id: str) -> np.ndarray:
 
 def generate_change_date_label(aoi_id: str) -> np.ndarray:
     label_cube = generate_timeseries_label(aoi_id)
-    length_ts = dataset_helpers.length_time_series(aoi_id)
+    length_ts = dataset_helpers.length_time_series('spacenet7_s1s2_dataset', aoi_id)
 
     change_date_label = np.zeros((label_cube.shape[0], label_cube.shape[1]), dtype=np.float32)
     for i in range(1, length_ts):
@@ -48,12 +48,17 @@ def generate_change_date_label(aoi_id: str) -> np.ndarray:
     return change_date_label
 
 
-def generate_change_label(aoi_id: str) -> np.ndarray:
-    label_cube = generate_timeseries_label(aoi_id)
-    length_ts = dataset_helpers.length_time_series(aoi_id)
-
-    sum_arr = np.sum(label_cube, axis=-1)
-    change = np.logical_and(sum_arr != 0, sum_arr != length_ts)
+def generate_change_label(dataset: str, aoi_id: str) -> np.ndarray:
+    # computing it for spacenet7 (change between first and last label)
+    if dataset == 'spacenet7_s1s2_dataset':
+        label_cube = generate_timeseries_label(aoi_id)
+        length_ts = dataset_helpers.length_time_series(dataset, aoi_id)
+        sum_arr = np.sum(label_cube, axis=-1)
+        change = np.logical_and(sum_arr != 0, sum_arr != length_ts)
+    # for oscd the change label corresponds to the normal label
+    else:
+        label_file = dataset_helpers.root_path() / 'oscd_multitemporal_dataset' / aoi_id / f'change_{aoi_id}.tif'
+        change, _, _ = geofiles.read_tif(label_file)
     return change.astype(np.uint8)
 
 

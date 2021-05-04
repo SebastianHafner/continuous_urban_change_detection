@@ -5,7 +5,8 @@ from tqdm import tqdm
 import numpy as np
 
 ROOT_PATH = Path('/storage/shafner')
-
+PATH_OSCD_DATASET = Path('/storage/shafner/urban_change_detection/OSCD_dataset')
+PATH_OSCD_MULTITEMPORAL_DATASET = Path('/storage/shafner/continuous_urban_change_detection/oscd_multitemporal_dataset')
 
 # helper function to get date from label file name
 # global_monthly_2020_01_mosaic_L15-1335E-1166N_5342_3524_13_Buildings.geojson
@@ -148,7 +149,29 @@ def generate_oscd_dataset_file(path_to_oscd_multitemporal_dataset: Path):
     geofiles.write_json(output_file, data)
 
 
+def produce_oscd_change_labels(path_oscd_dataset: Path, path_oscd_multitemporal_dataset: Path):
+    root_path = path_oscd_multitemporal_dataset
+    aoi_ids = [f.stem for f in root_path.iterdir() if f.is_dir()]
+    for aoi_id in aoi_ids:
+        change_label_file = path_oscd_dataset / 'labels' / aoi_id / 'cm' / f'{aoi_id}-cm.tif'
+        # does not contain geographical information
+        change, _, _ = geofiles.read_tif(change_label_file)
+
+        # change label value range from [1, 2] to [0, 1] by subtracting one
+        change = change - 1
+
+        # reading geographical information from sentinel 2 file
+        s2_path = path_oscd_multitemporal_dataset / aoi_id / 'sentinel2'
+        s2_file = [f for f in s2_path.glob('**/*') if f.is_file()][0]
+        _, geotransform, crs = geofiles.read_tif(s2_file)
+
+        to_file = path_oscd_multitemporal_dataset / aoi_id / f'change_{aoi_id}.tif'
+        geofiles.write_tif(to_file, change.astype(np.uint8), geotransform, crs)
+    pass
+
+
 if __name__ == '__main__':
     # assemble_buildings('train')
     # generate_spacenet7_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
-    generate_oscd_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'oscd_multitemporal_dataset')
+    # generate_oscd_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'oscd_multitemporal_dataset')
+    produce_oscd_change_labels(PATH_OSCD_DATASET, PATH_OSCD_MULTITEMPORAL_DATASET)

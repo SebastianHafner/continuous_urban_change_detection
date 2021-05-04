@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib as mpl
-from utils import geofiles, dataset_helpers, label_helpers
+from utils import geofiles, dataset_helpers, label_helpers, prediction_helpers
 import numpy as np
 from pathlib import Path
 from matplotlib import cm
@@ -68,17 +68,8 @@ def plot_buildings(ax, aoi_id: str, year: int, month: int):
     ax.set_yticks([])
 
 
-def plot_prediction(ax, dataset: str, config_name: str, aoi_id: str, year: int, month: int):
-    file = dataset_helpers.root_path() / dataset / aoi_id / config_name / f'pred_{aoi_id}_{year}_{month:02d}.tif'
-    img, _, _ = geofiles.read_tif(file)
-    img = img if len(img.shape) == 2 else img[:, :, 0]
-    ax.imshow(img, cmap='gray', vmin=0, vmax=1)
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-
-def plot_change_label(ax, aoi_id: str):
-    change = label_helpers.generate_change_label(aoi_id)
+def plot_change_label(ax, dataset, aoi_id: str):
+    change = label_helpers.generate_change_label(dataset, aoi_id)
     ax.imshow(change, cmap='gray', vmin=0, vmax=1)
     ax.set_xticks([])
     ax.set_yticks([])
@@ -119,6 +110,13 @@ def plot_change_data_bar(ax, dates: list):
 
 def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
     ax.imshow(img.clip(0, 1), cmap=cmap)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def plot_prediction(ax, config_name: str, dataset: str, aoi_id: str, year: int, month: int):
+    pred = prediction_helpers.load_prediction(config_name, dataset, aoi_id, year, month)
+    ax.imshow(pred.clip(0, 1), cmap='gray')
     ax.set_xticks([])
     ax.set_yticks([])
 

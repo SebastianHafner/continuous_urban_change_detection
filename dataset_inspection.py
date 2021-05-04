@@ -41,19 +41,24 @@ def visualize_time_series(dataset: str, aoi_id: str, config_name: str = None, in
     ts_complete = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=False)
     ts_clear = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=True)
     n = len(ts_complete)
-    n_rows = 3 if config_name is None else 4
+    gt_available = True if dataset == 'spacenet7_s1s2_dataset' else False
+    n_rows = 3 if gt_available else 2
+    if config_name is not None:
+        n_rows += 1
     plot_size = 3
 
     fig, axs = plt.subplots(n_rows, n, figsize=(n * plot_size, n_rows * plot_size))
 
     for i, (year, month, mask) in enumerate(tqdm(ts_complete)):
-        visualization.plot_sar(axs[0, i], aoi_id, year, month)
-        visualization.plot_optical(axs[1, i], aoi_id, year, month)
-        visualization.plot_buildings(axs[2, i], aoi_id, year, month)
+        visualization.plot_sar(axs[0, i], ds, aoi_id, year, month)
+        visualization.plot_optical(axs[1, i], ds, aoi_id, year, month)
+
+        if gt_available:
+            visualization.plot_buildings(axs[2, i], aoi_id, year, month)
 
         # title
         title = f'{year}-{month:02d}'
-        if include_f1_score:
+        if include_f1_score and gt_available:
             label = label_helpers.get_label_in_timeseries(aoi_id, i, ignore_bad_data=False) > 0
             pred = prediction_helpers.get_prediction_in_timeseries(config_name, aoi_id, i, ignore_bad_data=False) > 0.5
             f1_score = metrics.compute_f1_score(pred, label)
@@ -67,13 +72,12 @@ def visualize_time_series(dataset: str, aoi_id: str, config_name: str = None, in
         axs[0, i].set_title(title, c=color, fontsize=16, fontweight='bold')
 
         if config_name is not None:
-            visualization.plot_prediction(axs[3, i], config_name, aoi_id, year, month)
-
+            visualization.plot_prediction(axs[n_rows - 1, i], dataset, config_name, aoi_id, year, month)
 
     if not save_plot:
         plt.show()
     else:
-        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / f'time_series_{aoi_id}.png'
+        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset / f'time_series_{aoi_id}.png'
         output_file.parent.mkdir(exist_ok=True)
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
@@ -107,5 +111,8 @@ if __name__ == '__main__':
     #     visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
     #                           include_f1_score=True, save_plot=True)
     #     pass
-    for aoi_id in dataset_helpers.get_all_ids('oscd_multitemporal_dataset'):
-        visualize_satellite_data('oscd_multitemporal_dataset', aoi_id, save_plot=True)
+    ds = 'oscd_multitemporal_dataset'
+    cfg = 'fusionda_cons05_jaccardmorelikeloss'
+    for aoi_id in dataset_helpers.get_all_ids(ds):
+        # visualize_satellite_data('oscd_multitemporal_dataset', aoi_id, save_plot=True)
+        visualize_time_series(ds, aoi_id, config_name=cfg, save_plot=True)
