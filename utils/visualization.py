@@ -75,6 +75,15 @@ def plot_change_label(ax, dataset, aoi_id: str):
     ax.set_yticks([])
 
 
+def plot_change_date_label(ax, aoi_id: str):
+    ts = dataset_helpers.get_time_series('spacenet7_s1s2_dataset', aoi_id)
+    change_date_label = label_helpers.generate_change_date_label(aoi_id)
+    cmap = DateColorMap(len(ts))
+    ax.imshow(change_date_label, cmap=cmap.get_cmap(), vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
 def plot_endtoend_label(ax, arr: np.ndarray):
     n_colors = 25
     jet = cm.get_cmap('jet', n_colors)

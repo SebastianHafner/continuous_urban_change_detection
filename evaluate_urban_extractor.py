@@ -5,12 +5,12 @@ from tqdm import tqdm
 
 
 def run_urban_extractor_evaluation(config_name: str, aoi_id: str):
-    length_ts = dataset_helpers.length_time_series(aoi_id)
+    length_ts = dataset_helpers.length_timeseries('spacenet7_s1s2_dataset', aoi_id)
     f1_scores, precisions, recalls = [], [], []
 
     for i in range(length_ts):
-        label = label_helpers.get_label_in_timeseries(aoi_id, i)
-        pred = prediction_helpers.get_prediction_in_timeseries(config_name, aoi_id, i)
+        label = label_helpers.load_label_in_timeseries(aoi_id, i)
+        pred = prediction_helpers.load_prediction_in_timeseries(config_name, 'spacenet7_s1s2_dataset', aoi_id, i)
         pred = pred > 0.5
         f1_scores.append(metrics.compute_f1_score(pred, label))
         precisions.append(metrics.compute_precision(pred, label))
@@ -30,13 +30,13 @@ def show_precision_recall_evaluation(config_name: str):
     mean_f1, mean_p, mean_r = [], [], []
     std_f1, std_p, std_r = [], [], []
 
-    aoi_ids = dataset_helpers.get_all_ids()
+    aoi_ids = dataset_helpers.get_all_ids('spacenet7_s1s2_dataset')
     for aoi_id in tqdm(aoi_ids):
-        length_ts = dataset_helpers.length_time_series(aoi_id)
+        length_ts = dataset_helpers.length_timeseries('spacenet7_s1s2_dataset', aoi_id)
         f1_scores, precisions, recalls = [], [], []
 
         for i in range(length_ts):
-            label = label_helpers.get_label_in_timeseries(aoi_id, i)
+            label = label_helpers.load_label_in_timeseries(aoi_id, i)
             pred = prediction_helpers.get_prediction_in_timeseries(config_name, aoi_id, i)
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
@@ -72,14 +72,14 @@ def show_f1_evaluation(config_name: str):
 
     data = []
 
-    aoi_ids = dataset_helpers.get_all_ids()
+    aoi_ids = dataset_helpers.get_all_ids('spacenet7_s1s2_dataset')
     for aoi_id in tqdm(aoi_ids):
-        length_ts = dataset_helpers.length_time_series(aoi_id)
+        length_ts = dataset_helpers.length_timeseries('spacenet7_s1s2_dataset', aoi_id)
         f1_scores, precisions, recalls = [], [], []
 
         for i in range(length_ts):
-            label = label_helpers.get_label_in_timeseries(aoi_id, i)
-            pred = prediction_helpers.get_prediction_in_timeseries(config_name, aoi_id, i)
+            label = label_helpers.load_label_in_timeseries(aoi_id, i)
+            pred = prediction_helpers.load_prediction_in_timeseries(config_name, 'spacenet7_s1s2_dataset', aoi_id, i)
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
 

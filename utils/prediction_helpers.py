@@ -3,8 +3,8 @@ from utils import geofiles, visualization, dataset_helpers
 import numpy as np
 
 
-def generate_timeseries_prediction(config_name: str, dataset: str, aoi_id: str) -> np.ndarray:
-    dates = dataset_helpers.get_time_series(dataset, aoi_id)
+def load_prediction_timeseries(config_name: str, dataset: str, aoi_id: str) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
     predictions_path = dataset_helpers.root_path() / dataset / aoi_id / config_name
     n = len(dates)
     prediction_ts = None
@@ -26,9 +26,9 @@ def load_prediction(config_name: str, dataset: str, aoi_id: str, year: int, mont
     return pred
 
 
-def get_prediction_in_timeseries(config_name: str, dataset: str, aoi_id: str, index: int,
-                                 ignore_bad_data: bool = True) -> np.ndarray:
-    dates = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data)
+def load_prediction_in_timeseries(config_name: str, dataset: str, aoi_id: str, index: int,
+                                  ignore_bad_data: bool = True) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, ignore_bad_data)
     predictions_path = dataset_helpers.root_path() / dataset / aoi_id / config_name
     year, month, _ = dates[index]
     pred_file = predictions_path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
@@ -37,7 +37,7 @@ def get_prediction_in_timeseries(config_name: str, dataset: str, aoi_id: str, in
     return pred
 
 
-def get_features_in_timeseries(config_name: str, dataset: str, aoi_id: str, index: int) -> np.ndarray:
+def load_features_in_timeseries(config_name: str, dataset: str, aoi_id: str, index: int) -> np.ndarray:
     dates = dataset_helpers.get_time_series(dataset, aoi_id)
     predictions_path = dataset_helpers.root_path() / dataset / aoi_id / config_name
     year, month = dates[index]
@@ -48,4 +48,5 @@ def get_features_in_timeseries(config_name: str, dataset: str, aoi_id: str, inde
 
 
 if __name__ == '__main__':
-    predictions = generate_timeseries_prediction('fusionda_cons05_jaccardmorelikeloss', 'L15-0331E-1257N_1327_3160_13')
+    predictions = load_prediction_timeseries('fusionda_cons05_jaccardmorelikeloss', 'spacenet7_s1s2_dataset',
+                                             'L15-0331E-1257N_1327_3160_13')

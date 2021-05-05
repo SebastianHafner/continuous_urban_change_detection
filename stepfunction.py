@@ -4,7 +4,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 
-def test_change_detection(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str, save_plot: bool = False):
+def test_change_detection(model: cd_models.StepFunctionModel, dataset: str, aoi_id: str, save_plot: bool = False):
 
     dates = dataset_helpers.get_time_series(dataset, aoi_id)
     start_date = dates[0][:-1]
@@ -39,7 +39,7 @@ def test_change_detection(model: cd_models.ChangeDetectionMethod, dataset: str, 
     plt.close(fig)
 
 
-def test_change_dating(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str, save_plot: bool = False):
+def test_change_dating(model: cd_models.StepFunctionModel, dataset: str, aoi_id: str, save_plot: bool = False):
     # change detection
     change = model.change_detection(dataset, aoi_id)
 
@@ -69,12 +69,18 @@ def test_change_dating(model: cd_models.ChangeDetectionMethod, dataset: str, aoi
     save_path = dataset_helpers.root_path() / 'inference' / 'advancedstepfunction'
     save_path.mkdir(exist_ok=True)
 
+
+def test_confidence(model: cd_models.StepFunctionModel, dataset: str, aoi_id: str, save_plot: bool = False):
+    pass
+
 if __name__ == '__main__':
 
-    ds = 'oscd_multitemporal_dataset'
+    # ds = 'oscd_multitemporal_dataset'
+    ds = 'spacenet7_s1s2_dataset'
     cfg = 'fusionda_cons05_jaccardmorelikeloss'
-    # model = cd_models.BasicStepFunctionModel(cfg, n_stable=2)
-    model = cd_models.ImprovedStepFunctionModel(cfg)
+    model = cd_models.StepFunctionModel(cfg, n_stable=6)
+    # model = cd_models.ImprovedStepFunctionModel(cfg)
+    # model = cd_models.ImprovedStepFunctionModelV2(cfg)
 
     aoi_ids = dataset_helpers.get_all_ids(ds)
     for aoi_id in tqdm(aoi_ids):

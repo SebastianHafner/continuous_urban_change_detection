@@ -21,9 +21,9 @@ class ChangeDetectionMethod(ABC):
         pass
 
 
-class BasicStepFunctionModel(ChangeDetectionMethod):
+class StepFunctionModel(ChangeDetectionMethod):
 
-    def __init__(self, config_name: str, n_stable: int = 2):
+    def __init__(self, config_name: str, n_stable: int = 2, max_error: float = 0.5):
         super().__init__('stepfunction', config_name)
         self.fitted_dataset = None
         self.fitted_aoi = None
@@ -32,6 +32,7 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
         self.cached_fit = None
         self.length_ts = None
         self.n_stable = n_stable
+        self.max_error = max_error
 
     @staticmethod
     def _nochange_function(x: np.ndarray, return_value: float) -> np.ndarray:
@@ -95,11 +96,16 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
         return y_pred
 
     # root mean square error of model
-    def model_error(self, dataset: str, aoi_id: str) -> float:
+    def model_error(self, dataset: str, aoi_id: str) -> np.ndarray:
         self._fit(dataset, aoi_id)
         y_pred = self._predict(dataset, aoi_id)
         probs = prediction_helpers.generate_timeseries_prediction(self.config_name, dataset, aoi_id)
         return np.sqrt(self._mse(probs, y_pred))
+
+    def model_confidence(self, dataset: str, aoi_id: str) -> np.ndarray:
+        error = self.model_error(dataset, aoi_id)
+        confidence = np.clip(self.max_error - error, 0, self.max_error) / self.max_error
+        return confidence
 
     def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
         self._fit(dataset, aoi_id)
@@ -120,7 +126,7 @@ class BasicStepFunctionModel(ChangeDetectionMethod):
         pass
 
 
-class ImprovedStepFunctionModel(BasicStepFunctionModel):
+class ImprovedStepFunctionModel(StepFunctionModel):
 
     def __init__(self, config_name, max_error: float = 0.25):
         super().__init__(config_name)
@@ -138,14 +144,37 @@ class ImprovedStepFunctionModel(BasicStepFunctionModel):
         return np.array(change).astype(np.uint8)
 
     def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
-        self._fit(aoi_id)
+        self._fit(dataset, aoi_id)
         change_date = self.cached_fit.copy()
         change_date[change_date == self.length_ts] = 0
 
-        model_error = self.model_error(aoi_id)
+        model_error = self.model_error(dataset, aoi_id)
         change_date[model_error > self.max_error] = 0
 
         return np.array(change_date).astype(np.uint8)
+
+
+class ImprovedStepFunctionModelV2(StepFunctionModel):
+
+    def __init__(self, config_name):
+        super().__init__(config_name)
+        self.name = 'improvedstepfunctionv2'
+
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
+
+        # convert to change date product to change detection (0 and length_ts is no change)
+        change = np.logical_and(self.cached_fit != 0, self.cached_fit != self.length_ts)
+        model_error = self.model_error(dataset, aoi_id)
+
+        thresh = threshold_otsu(model_error)
+        binary = np.array(model_error > thresh)
+        change[binary] = 0
+
+        return np.array(change).astype(np.uint8)
+
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+        pass
 
 
 class SimplifiedDeepChangeVectorAnalysis(ChangeDetectionMethod):

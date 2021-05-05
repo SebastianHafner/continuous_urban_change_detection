@@ -36,10 +36,10 @@ def visualize_satellite_data(dataset: str, aoi_id: str, save_plot: bool = False)
     plt.close(fig)
 
 
-def visualize_time_series(dataset: str, aoi_id: str, config_name: str = None, include_f1_score: bool = False,
+def visualize_timeseries(dataset: str, aoi_id: str, config_name: str = None, include_f1_score: bool = False,
                           save_plot: bool = False):
-    ts_complete = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=False)
-    ts_clear = dataset_helpers.get_time_series(dataset, aoi_id, ignore_bad_data=True)
+    ts_complete = dataset_helpers.get_timeseries(dataset, aoi_id, ignore_bad_data=False)
+    ts_clear = dataset_helpers.get_timeseries(dataset, aoi_id, ignore_bad_data=True)
     n = len(ts_complete)
     gt_available = True if dataset == 'spacenet7_s1s2_dataset' else False
     n_rows = 3 if gt_available else 2
@@ -58,21 +58,12 @@ def visualize_time_series(dataset: str, aoi_id: str, config_name: str = None, in
 
         # title
         title = f'{year}-{month:02d}'
-        if include_f1_score and gt_available:
-            label = label_helpers.get_label_in_timeseries(aoi_id, i, ignore_bad_data=False) > 0
-            pred = prediction_helpers.get_prediction_in_timeseries(config_name, aoi_id, i, ignore_bad_data=False) > 0.5
-            f1_score = metrics.compute_f1_score(pred, label)
-            title += f' (F1 {f1_score:.2f})'
-
-        if [year, month, mask] in ts_clear:
-            color = 'green' if not mask else 'blue'
-        else:
-            color = 'orange' if not mask else 'red'
-
+        # TODO: readd differentiation for masked gt
+        color = 'green' if [year, month, mask] in ts_clear else 'red'
         axs[0, i].set_title(title, c=color, fontsize=16, fontweight='bold')
 
         if config_name is not None:
-            visualization.plot_prediction(axs[n_rows - 1, i], dataset, config_name, aoi_id, year, month)
+            visualization.plot_prediction(axs[n_rows - 1, i], config_name, dataset, aoi_id, year, month)
 
     if not save_plot:
         plt.show()
@@ -83,36 +74,69 @@ def visualize_time_series(dataset: str, aoi_id: str, config_name: str = None, in
     plt.close(fig)
 
 
-def visualize_first_and_last_optical(aoi_id: str, save_plot: bool = False):
-    dates = dataset_helpers.get_time_series(aoi_id)
-    fig, axs = plt.subplots(2, 1, figsize=(10, 20))
+def sanity_check_change_detection_label(dataset: str, aoi_id: str, save_plot: bool = False):
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
 
     # first
-    year_first, month_first = dates[0]
-    visualization.plot_optical(axs[0], aoi_id, year_first, month_first)
+    year_first, month_first = dates[0][:-1]
+    visualization.plot_optical(axs[0], dataset, aoi_id, year_first, month_first)
 
     # last
-    year_last, month_last = dates[-1]
-    visualization.plot_optical(axs[1], aoi_id, year_last, month_last)
+    year_last, month_last = dates[-1][:-1]
+    visualization.plot_optical(axs[1], dataset, aoi_id, year_last, month_last)
+
+    # change label
+    visualization.plot_change_label(axs[2], dataset, aoi_id)
 
     if not save_plot:
         plt.show()
-        plt.close(fig)
     else:
-        output_file = dataset_helpers.root_path() / 'plots' / 'first_last' / f'{aoi_id}.png'
-        output_file.parent.mkdir(exist_ok=True)
+        output_path = dataset_helpers.root_path() / 'plots' / 'sanity_check' / 'change_label' / dataset
+        output_path.mkdir(exist_ok=True)
+        output_file = output_path / f'{aoi_id}.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+
+def sanity_check_change_dating_label(aoi_id: str, save_plot: bool = False):
+    ts = dataset_helpers.get_time_series('spacenet7_s1s2_dataset', aoi_id)
+    n = len(ts)
+    n_rows, n_cols = 1, n + 1
+    plot_size = 3
+
+    cmap = visualization.DateColorMap(n).get_cmap()
+
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(n_cols * plot_size, n_rows * plot_size))
+
+    for i, (year, month, _) in enumerate(tqdm(ts)):
+        visualization.plot_optical(axs[i], 'spacenet7_s1s2_dataset', aoi_id, year, month)
+        title = f'{year}-{month:02d}'
+        color = cmap(i)
+        axs[i].set_title(title, c=color, fontsize=16, fontweight='bold')
+
+    visualization.plot_change_date_label(axs[-1], aoi_id)
+
+    if not save_plot:
+        plt.show()
+    else:
+        output_path = dataset_helpers.root_path() / 'plots' / 'sanity_check' / 'date_label'
+        output_path.parent.mkdir(exist_ok=True)
+        output_file = output_path / f'{aoi_id}.png'
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close(fig)
 
 
 if __name__ == '__main__':
-    # for i, aoi_id in enumerate(dataset_helpers.get_all_ids()):
-    #     print(f'{i}: {aoi_id}')
-    #     # visualize_first_and_last_optical(aoi_id, save_plot=True)
-    #     visualize_time_series(aoi_id, config_name='fusionda_cons05_jaccardmorelikeloss',
-    #                           include_f1_score=True, save_plot=True)
-    #     pass
     ds = 'oscd_multitemporal_dataset'
+    ds = 'spacenet7_s1s2_dataset'
     cfg = 'fusionda_cons05_jaccardmorelikeloss'
     for aoi_id in dataset_helpers.get_all_ids(ds):
         # visualize_satellite_data('oscd_multitemporal_dataset', aoi_id, save_plot=True)
-        visualize_time_series(ds, aoi_id, config_name=cfg, save_plot=True)
+
+        # visualize_time_series(ds, aoi_id, config_name=cfg, save_plot=True)
+        # sanity_check_change_detection_label(ds, aoi_id, save_plot=False)
+        # sanity_check_change_dating_label(aoi_id, save_plot=True)
+        pass
+
+    sanity_check_change_detection_label(ds, 'L15-0358E-1220N_1433_3310_13', save_plot=False)
