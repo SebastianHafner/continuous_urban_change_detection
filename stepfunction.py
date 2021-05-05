@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 def test_change_detection(model: cd_models.StepFunctionModel, dataset: str, aoi_id: str, save_plot: bool = False):
 
-    dates = dataset_helpers.get_time_series(dataset, aoi_id)
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
     start_date = dates[0][:-1]
     end_date = dates[-1][:-1]
 
@@ -40,10 +40,8 @@ def test_change_detection(model: cd_models.StepFunctionModel, dataset: str, aoi_
 
 
 def test_change_dating(model: cd_models.StepFunctionModel, dataset: str, aoi_id: str, save_plot: bool = False):
-    # change detection
-    change = model.change_detection(dataset, aoi_id)
 
-    dates = dataset_helpers.get_time_series(aoi_id)
+    dates = dataset_helpers.get_timeseries('spacenet7_s1s2_dataset', aoi_id)
 
     fig, axs = plt.subplots(2, 3, figsize=(15, 10))
 

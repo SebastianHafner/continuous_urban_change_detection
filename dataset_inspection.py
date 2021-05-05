@@ -100,7 +100,7 @@ def sanity_check_change_detection_label(dataset: str, aoi_id: str, save_plot: bo
 
 
 def sanity_check_change_dating_label(aoi_id: str, save_plot: bool = False):
-    ts = dataset_helpers.get_time_series('spacenet7_s1s2_dataset', aoi_id)
+    ts = dataset_helpers.get_timeseries('spacenet7_s1s2_dataset', aoi_id)
     n = len(ts)
     n_rows, n_cols = 1, n + 1
     plot_size = 3
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
         # visualize_time_series(ds, aoi_id, config_name=cfg, save_plot=True)
         # sanity_check_change_detection_label(ds, aoi_id, save_plot=False)
-        # sanity_check_change_dating_label(aoi_id, save_plot=True)
+        sanity_check_change_dating_label(aoi_id, save_plot=True)
         pass
 
-    sanity_check_change_detection_label(ds, 'L15-0358E-1220N_1433_3310_13', save_plot=False)
+    # sanity_check_change_detection_label(ds, 'L15-0358E-1220N_1433_3310_13', save_plot=True)

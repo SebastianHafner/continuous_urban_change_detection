@@ -37,7 +37,7 @@ def show_precision_recall_evaluation(config_name: str):
 
         for i in range(length_ts):
             label = label_helpers.load_label_in_timeseries(aoi_id, i)
-            pred = prediction_helpers.get_prediction_in_timeseries(config_name, aoi_id, i)
+            pred = prediction_helpers.load_prediction_in_timeseries(config_name, aoi_id, i)
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
             precisions.append(metrics.compute_precision(pred, label))

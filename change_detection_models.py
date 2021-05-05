@@ -51,10 +51,10 @@ class StepFunctionModel(ChangeDetectionMethod):
         if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
             return
 
-        dates = dataset_helpers.get_time_series(dataset, aoi_id)
+        dates = dataset_helpers.get_timeseries(dataset, aoi_id)
         self.length_ts = len(dates)
 
-        probs_cube = prediction_helpers.generate_timeseries_prediction(self.config_name, dataset, aoi_id)
+        probs_cube = prediction_helpers.load_prediction_timeseries(self.config_name, dataset, aoi_id)
         data_shape = probs_cube.shape
 
         # fitting stable functions
@@ -99,7 +99,7 @@ class StepFunctionModel(ChangeDetectionMethod):
     def model_error(self, dataset: str, aoi_id: str) -> np.ndarray:
         self._fit(dataset, aoi_id)
         y_pred = self._predict(dataset, aoi_id)
-        probs = prediction_helpers.generate_timeseries_prediction(self.config_name, dataset, aoi_id)
+        probs = prediction_helpers.load_prediction_timeseries(self.config_name, dataset, aoi_id)
         return np.sqrt(self._mse(probs, y_pred))
 
     def model_confidence(self, dataset: str, aoi_id: str) -> np.ndarray:

@@ -76,7 +76,7 @@ def plot_change_label(ax, dataset, aoi_id: str):
 
 
 def plot_change_date_label(ax, aoi_id: str):
-    ts = dataset_helpers.get_time_series('spacenet7_s1s2_dataset', aoi_id)
+    ts = dataset_helpers.get_timeseries('spacenet7_s1s2_dataset', aoi_id)
     change_date_label = label_helpers.generate_change_date_label(aoi_id)
     cmap = DateColorMap(len(ts))
     ax.imshow(change_date_label, cmap=cmap.get_cmap(), vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
