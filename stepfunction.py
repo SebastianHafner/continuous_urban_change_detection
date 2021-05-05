@@ -75,6 +75,7 @@ if __name__ == '__main__':
 
     # ds = 'oscd_multitemporal_dataset'
     ds = 'spacenet7_s1s2_dataset'
+    ds = 'oscd_multitemporal_dataset'
     cfg = 'fusionda_cons05_jaccardmorelikeloss'
     model = cd_models.StepFunctionModel(cfg, n_stable=6)
     # model = cd_models.ImprovedStepFunctionModel(cfg)

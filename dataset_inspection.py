@@ -68,7 +68,7 @@ def visualize_timeseries(dataset: str, aoi_id: str, config_name: str = None, inc
     if not save_plot:
         plt.show()
     else:
-        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset / f'time_series_{aoi_id}.png'
+        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset / f'{aoi_id}.png'
         output_file.parent.mkdir(exist_ok=True)
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
@@ -134,9 +134,9 @@ if __name__ == '__main__':
     for aoi_id in dataset_helpers.get_all_ids(ds):
         # visualize_satellite_data('oscd_multitemporal_dataset', aoi_id, save_plot=True)
 
-        # visualize_time_series(ds, aoi_id, config_name=cfg, save_plot=True)
+        visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         # sanity_check_change_detection_label(ds, aoi_id, save_plot=False)
-        sanity_check_change_dating_label(aoi_id, save_plot=True)
+        # sanity_check_change_dating_label(aoi_id, save_plot=True)
         pass
 
     # sanity_check_change_detection_label(ds, 'L15-0358E-1220N_1433_3310_13', save_plot=True)

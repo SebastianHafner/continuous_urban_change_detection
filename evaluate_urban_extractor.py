@@ -96,7 +96,10 @@ def show_f1_evaluation(config_name: str):
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_tick_labels, rotation=90, fontsize=fontsize)
     ax.set_ylabel('F1 score', fontsize=fontsize)
+    y_ticks = np.linspace(0, 1, 6)
     ax.set_ylim((0, 1))
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([f'{y_tick:.1f}' for y_tick in y_ticks], fontsize=fontsize)
     plt.show()
 
 
