@@ -54,5 +54,5 @@ def get_geo(dataset: str, aoi_id: str) -> tuple:
 
 
 def date2str(date: list):
-    year, month = date
+    year, month, _ = date
     return f'{year-2000:02d}-{month:02d}'

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+# TODO: use load label function
 def load_label_timeseries(aoi_id: str) -> np.ndarray:
     dates = dataset_helpers.get_timeseries('spacenet7_s1s2_dataset', aoi_id)
     buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
@@ -46,8 +47,13 @@ def generate_change_label(dataset: str, aoi_id: str) -> np.ndarray:
 
 def load_label_in_timeseries(aoi_id: str, index: int, ignore_bad_data: bool = True) -> np.ndarray:
     dates = dataset_helpers.get_timeseries('spacenet7_s1s2_dataset', aoi_id, ignore_bad_data)
-    buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
     year, month, _ = dates[index]
+    label = load_label(aoi_id, year, month)
+    return label
+
+
+def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
+    buildings_path = dataset_helpers.root_path() / 'spacenet7_s1s2_dataset' / aoi_id / 'buildings'
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
     label = np.squeeze(label)

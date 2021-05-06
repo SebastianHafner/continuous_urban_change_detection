@@ -23,24 +23,27 @@ def load_prediction(config_name: str, dataset: str, aoi_id: str, year: int, mont
     path = dataset_helpers.root_path() / dataset / aoi_id / config_name
     pred_file = path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
     pred, _, _ = geofiles.read_tif(pred_file)
+    pred = np.squeeze(pred)
     return pred
 
 
 def load_prediction_in_timeseries(config_name: str, dataset: str, aoi_id: str, index: int,
                                   ignore_bad_data: bool = True) -> np.ndarray:
     dates = dataset_helpers.get_timeseries(dataset, aoi_id, ignore_bad_data)
-    predictions_path = dataset_helpers.root_path() / dataset / aoi_id / config_name
     year, month, _ = dates[index]
-    pred_file = predictions_path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
-    pred, _, _ = geofiles.read_tif(pred_file)
-    pred = np.squeeze(pred)
+    pred = load_prediction(config_name, dataset, aoi_id, year, month)
     return pred
 
 
 def load_features_in_timeseries(config_name: str, dataset: str, aoi_id: str, index: int) -> np.ndarray:
-    dates = dataset_helpers.get_time_series(dataset, aoi_id)
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
+    year, month, _ = dates[index]
+    features = load_features(config_name, dataset, aoi_id, year, month)
+    return features
+
+
+def load_features(config_name: str, dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
     predictions_path = dataset_helpers.root_path() / dataset / aoi_id / config_name
-    year, month = dates[index]
     pred_file = predictions_path / f'features_{aoi_id}_{year}_{month:02d}.tif'
     features, _, _ = geofiles.read_tif(pred_file)
     features = np.squeeze(features)

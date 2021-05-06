@@ -29,6 +29,22 @@ class DateColorMap(object):
         return self.ts_length
 
 
+class ChangeConfidenceColorMap(object):
+
+    def __init__(self, color_map: str = 'RdYlGn'):
+        n = int(1e3)
+        default_cmap = cm.get_cmap(color_map, n - 1)
+        confidence_colors = default_cmap(np.linspace(0, 1, n - 1))
+        no_change_color = np.array([0, 0, 0, 1])
+        cmap_colors = np.zeros((n, 4))
+        cmap_colors[0, :] = no_change_color
+        cmap_colors[1:, :] = confidence_colors
+        self.cmap = colors.ListedColormap(cmap_colors)
+
+    def get_cmap(self):
+        return self.cmap
+
+
 def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'true_color',
                  scale_factor: float = 0.4):
     file = dataset_helpers.root_path() / dataset / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
@@ -113,12 +129,20 @@ def plot_change_data_bar(ax, dates: list):
     cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap.get_cmap(), norm=norm, orientation='horizontal',
                                    ticks=cb_ticks)
     cb.set_label('Change Date (yy-mm)', fontsize=20)
-    cb_ticklabels = ['BG'] + [dataset_helpers.date2str(d) for d in dates] + ['BUA']
-    cb.ax.set_xticklabels(cb_ticklabels)
+    cb_ticklabels = ['NC'] + [dataset_helpers.date2str(d) for d in dates] + ['BUA']
+    cb.ax.set_xticklabels(cb_ticklabels, fontsize=20)
 
 
 def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
     ax.imshow(img.clip(0, 1), cmap=cmap)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def plot_change_confidence(ax, change: np.ndarray, confidence: np.ndarray, cmap: str = 'RdYlGn'):
+    confidence = (confidence + 1e-6) * change
+    cmap = ChangeConfidenceColorMap().get_cmap()
+    ax.imshow(confidence, cmap=cmap, vmin=0, vmax=1)
     ax.set_xticks([])
     ax.set_yticks([])
 
