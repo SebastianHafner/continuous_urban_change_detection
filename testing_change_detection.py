@@ -79,8 +79,8 @@ if __name__ == '__main__':
     thresholding = cd_models.Thresholding(cfg)
     stepfunction = cd_models.StepFunctionModel(cfg, n_stable=6)
 
-    model = dcva
+    model = stepfunction
     for aoi_id in dataset_helpers.get_all_ids(ds):
-        qualitative_testing(model, ds, aoi_id)
+        qualitative_testing(model, ds, aoi_id, save_plot=False)
         # quantitative_testing(model, ds, aoi_id)
     # quantitative_testing_dataset(model, ds)
