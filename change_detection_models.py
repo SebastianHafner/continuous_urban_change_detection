@@ -15,15 +15,21 @@ class ChangeDetectionMethod(ABC):
     def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
+
+class ChangeDatingMethod(ChangeDetectionMethod):
+
+    def __init__(self, name: str, config_name: str):
+        super().__init__(name, config_name)
+
     @ abstractmethod
     # returns int array where numbers correspond to change date (index in dates list)
     def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
 
-class StepFunctionModel(ChangeDetectionMethod):
+class StepFunctionModel(ChangeDatingMethod):
 
-    def __init__(self, config_name: str, n_stable: int = 2, max_error: float = 0.5):
+    def __init__(self, config_name: str, n_stable: int = 2, max_error: float = 0.5, ts_extension: int = 0):
         super().__init__('stepfunction', config_name)
         self.fitted_dataset = None
         self.fitted_aoi = None
@@ -33,6 +39,7 @@ class StepFunctionModel(ChangeDetectionMethod):
         self.length_ts = None
         self.n_stable = n_stable
         self.max_error = max_error
+        self.ts_extension = ts_extension
 
     @staticmethod
     def _nochange_function(x: np.ndarray, return_value: float) -> np.ndarray:
@@ -54,7 +61,7 @@ class StepFunctionModel(ChangeDetectionMethod):
         dates = dataset_helpers.get_timeseries(dataset, aoi_id)
         self.length_ts = len(dates)
 
-        probs_cube = prediction_helpers.load_prediction_timeseries(self.config_name, dataset, aoi_id)
+        probs_cube = prediction_helpers.load_prediction_timeseries(self.config_name, dataset, aoi_id, self.ts_extension)
         data_shape = probs_cube.shape
 
         # fitting stable functions
@@ -71,7 +78,7 @@ class StepFunctionModel(ChangeDetectionMethod):
         errors_change = []
         for x0 in range(1, self.length_ts):
             y_pred_change = np.zeros(data_shape)
-            y_pred_change[:, :, x0:] = 1
+            y_pred_change[:, :, x0 + self.ts_extension:] = 1
             mse_change = self._mse(probs_cube, y_pred_change)
             errors_change.append(mse_change)
         errors_change = np.stack(errors_change)
@@ -87,9 +94,7 @@ class StepFunctionModel(ChangeDetectionMethod):
     def _predict(self, dataset, aoi_id: str) -> np.ndarray:
         self._fit(dataset, aoi_id)
         y_pred = np.zeros((*self.cached_fit.shape, self.length_ts), dtype=np.uint8)
-        # TODO: this one is probably redundant because 0 initialization
-        y_pred[self.cached_fit == 0, ] = 0
-        y_pred[self.cached_fit == self.length_ts] = 1
+        # TODO: fix this
         for x0 in range(1, self.length_ts):
             bool_arr = self.cached_fit == x0
             y_pred[bool_arr, x0:] = 1
@@ -123,57 +128,6 @@ class StepFunctionModel(ChangeDetectionMethod):
 
     # also returns whether a stable pixels is urban or non-urban
     def change_dating_plus(self, aoi_id: str) -> tuple:
-        pass
-
-
-class ImprovedStepFunctionModel(StepFunctionModel):
-
-    def __init__(self, config_name, max_error: float = 0.25):
-        super().__init__(config_name)
-        self.name = 'improvedstepfunction'
-        self.max_error = max_error
-
-    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
-        self._fit(dataset, aoi_id)
-
-        # convert to change date product to change detection (0 and length_ts is no change)
-        change = np.logical_and(self.cached_fit != 0, self.cached_fit != self.length_ts)
-        model_error = self.model_error(dataset, aoi_id)
-        change[model_error > self.max_error] = 0
-
-        return np.array(change).astype(np.uint8)
-
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
-        self._fit(dataset, aoi_id)
-        change_date = self.cached_fit.copy()
-        change_date[change_date == self.length_ts] = 0
-
-        model_error = self.model_error(dataset, aoi_id)
-        change_date[model_error > self.max_error] = 0
-
-        return np.array(change_date).astype(np.uint8)
-
-
-class ImprovedStepFunctionModelV2(StepFunctionModel):
-
-    def __init__(self, config_name):
-        super().__init__(config_name)
-        self.name = 'improvedstepfunctionv2'
-
-    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
-        self._fit(dataset, aoi_id)
-
-        # convert to change date product to change detection (0 and length_ts is no change)
-        change = np.logical_and(self.cached_fit != 0, self.cached_fit != self.length_ts)
-        model_error = self.model_error(dataset, aoi_id)
-
-        thresh = threshold_otsu(model_error)
-        binary = np.array(model_error > thresh)
-        change[binary] = 0
-
-        return np.array(change).astype(np.uint8)
-
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
 
@@ -224,9 +178,6 @@ class DeepChangeVectorAnalysis(ChangeDetectionMethod):
         change = self._threshold(magnitude)
         return change
 
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
-        pass
-
 
 class PostClassificationComparison(ChangeDetectionMethod):
 
@@ -250,9 +201,6 @@ class PostClassificationComparison(ChangeDetectionMethod):
             change = class_start != class_end
         return np.array(change).astype(np.uint8)
 
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
-        pass
-
 
 class Thresholding(ChangeDetectionMethod):
 
@@ -272,9 +220,6 @@ class Thresholding(ChangeDetectionMethod):
         change = np.array(difference > thresh)
 
         return np.array(change).astype(np.uint8)
-
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
-        pass
 
 
 if __name__ == '__main__':

@@ -29,7 +29,7 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
     if not save_plot:
         plt.show()
     else:
-        save_path = dataset_helpers.root_path() / 'plots' / 'testing' / model.name
+        save_path = dataset_helpers.root_path() / 'plots' / 'testing' / model.name / 'change_detection'
         save_path.mkdir(exist_ok=True)
         output_file = save_path / f'change_{aoi_id}.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
@@ -54,13 +54,13 @@ def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod, dataset
     preds, gts = [], []
     for aoi_id in tqdm(dataset_helpers.get_all_ids(dataset)):
         pred = model.change_detection(dataset, aoi_id)
-        preds.append(pred)
+        preds.append(pred.flatten())
         gt = label_helpers.generate_change_label(dataset, aoi_id)
-        gts.append(gt)
-        assert(pred.size() == gt.size())
+        gts.append(gt.flatten())
+        assert(pred.size == gt.size)
 
-    preds = np.stack(preds)
-    gts = np.stack(gts)
+    preds = np.concatenate(preds)
+    gts = np.concatenate(gts)
 
     precision = metrics.compute_precision(preds, gts)
     recall = metrics.compute_recall(preds, gts)
@@ -81,6 +81,7 @@ if __name__ == '__main__':
 
     model = stepfunction
     for aoi_id in dataset_helpers.get_all_ids(ds):
-        qualitative_testing(model, ds, aoi_id, save_plot=False)
+        qualitative_testing(model, ds, aoi_id, save_plot=True)
         # quantitative_testing(model, ds, aoi_id)
     # quantitative_testing_dataset(model, ds)
+

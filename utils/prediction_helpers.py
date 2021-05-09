@@ -3,20 +3,30 @@ from utils import geofiles, visualization, dataset_helpers
 import numpy as np
 
 
-def load_prediction_timeseries(config_name: str, dataset: str, aoi_id: str) -> np.ndarray:
+def load_prediction_timeseries(config_name: str, dataset: str, aoi_id: str, ts_extension: int = 0) -> np.ndarray:
     dates = dataset_helpers.get_timeseries(dataset, aoi_id)
-    predictions_path = dataset_helpers.root_path() / dataset / aoi_id / config_name
-    n = len(dates)
-    prediction_ts = None
-    for i, (year, month, _) in enumerate(dates):
-        pred_file = predictions_path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
-        pred, _, _ = geofiles.read_tif(pred_file)
-        pred = np.squeeze(pred)
-        if prediction_ts is None:
-            prediction_ts = np.zeros((*pred.shape, n), dtype=np.float32)
-        prediction_ts[:, :, i] = pred
 
-    return prediction_ts
+    yx_shape = dataset_helpers.get_yx_size(dataset, aoi_id)
+    n = len(dates)
+    pred_ts = np.zeros((*yx_shape, n + 2 * ts_extension), dtype=np.float32)
+
+    # fill in time series value
+    for i, (year, month, _) in enumerate(dates):
+        pred = load_prediction(config_name, dataset, aoi_id, year, month)
+        pred_ts[:, :, i + ts_extension] = pred
+
+    # padd start and end
+    if ts_extension != 0:
+        start_pred = pred_ts[:, :, ts_extension]
+        start_extension = np.repeat(start_pred[:, :, np.newaxis], ts_extension, axis=2)
+        pred_ts[:, :, :ts_extension] = start_extension
+
+        end_index = ts_extension + n - 1
+        end_pred = pred_ts[:, :, end_index]
+        end_extension = np.repeat(end_pred[:, :, np.newaxis], ts_extension, axis=2)
+        pred_ts[:, :, end_index + 1:] = end_extension
+
+    return pred_ts
 
 
 def load_prediction(config_name: str, dataset: str, aoi_id: str, year: int, month: int):

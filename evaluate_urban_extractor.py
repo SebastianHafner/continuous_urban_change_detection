@@ -89,7 +89,7 @@ def show_f1_evaluation(config_name: str):
     data_boxplots = [d[1] for d in data]
 
     fontsize = 20
-    fig, ax = plt.subplots(1, 1, figsize=(len(aoi_ids), 10))
+    fig, ax = plt.subplots(1, 1, figsize=(len(aoi_ids) / 2, 10))
     ax.boxplot(data_boxplots, whis=(0, 100))
     x_ticks = np.arange(len(data)) + 1
     x_tick_labels = [d[0][4:15] for d in data]

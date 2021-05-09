@@ -45,12 +45,20 @@ def get_all_ids(dataset: str) -> list:
     return metadata['sites'].keys()
 
 
+# TODO: make this alos work for OSCD dataset
 def get_geo(dataset: str, aoi_id: str) -> tuple:
     dates = get_timeseries(dataset, aoi_id, ignore_bad_data=False)
     year, month = dates[0]
     buildings_file = root_path() / dataset / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     _, transform, crs = geofiles.read_tif(buildings_file)
     return transform, crs
+
+
+def get_yx_size(dataset: str, aoi_id: str) -> tuple:
+    folder = root_path() / dataset / aoi_id / 'sentinel1'
+    file = [f for f in folder.glob('**/*') if f.is_file()][0]
+    arr, transform, crs = geofiles.read_tif(file)
+    return arr.shape[0], arr.shape[1]
 
 
 def date2str(date: list):
