@@ -47,7 +47,7 @@ class ChangeConfidenceColorMap(object):
 
 def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'true_color',
                  scale_factor: float = 0.4):
-    file = dataset_helpers.root_path() / dataset / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+    file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -60,7 +60,7 @@ def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str 
 
 
 def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'VV'):
-    file = dataset_helpers.root_path() / dataset / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+    file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -73,7 +73,7 @@ def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'V
 
 
 def plot_buildings(ax, aoi_id: str, year: int, month: int):
-    file = dataset_helpers.dataset_path() / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
+    file = dataset_helpers.dataset_path('spacenet7') / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -92,7 +92,7 @@ def plot_change_label(ax, dataset, aoi_id: str):
 
 
 def plot_change_date_label(ax, aoi_id: str):
-    ts = dataset_helpers.get_timeseries('spacenet7_s1s2_dataset', aoi_id)
+    ts = dataset_helpers.get_timeseries('spacenet7', aoi_id)
     change_date_label = label_helpers.generate_change_date_label(aoi_id)
     cmap = DateColorMap(len(ts))
     ax.imshow(change_date_label, cmap=cmap.get_cmap(), vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
@@ -147,8 +147,8 @@ def plot_change_confidence(ax, change: np.ndarray, confidence: np.ndarray, cmap:
     ax.set_yticks([])
 
 
-def plot_prediction(ax, config_name: str, dataset: str, aoi_id: str, year: int, month: int):
-    pred = prediction_helpers.load_prediction(config_name, dataset, aoi_id, year, month)
+def plot_prediction(ax, dataset: str, aoi_id: str, year: int, month: int):
+    pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
     ax.imshow(pred.clip(0, 1), cmap='gray')
     ax.set_xticks([])
     ax.set_yticks([])

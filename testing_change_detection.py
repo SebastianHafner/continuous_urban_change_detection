@@ -70,18 +70,16 @@ def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod, dataset
 
 
 if __name__ == '__main__':
-    cfg = 'fusionda_cons05_jaccardmorelikeloss'
-    ds = 'spacenet7_s1s2_dataset'
-    ds = 'oscd_multitemporal_dataset'
+    ds = 'spacenet7'
 
-    dcva = cd_models.DeepChangeVectorAnalysis(cfg, subset_features=True)
-    pcc = cd_models.PostClassificationComparison(cfg)
-    thresholding = cd_models.Thresholding(cfg)
-    stepfunction = cd_models.StepFunctionModel(cfg, n_stable=6)
+    dcva = cd_models.DeepChangeVectorAnalysis(subset_features=True)
+    pcc = cd_models.PostClassificationComparison()
+    thresholding = cd_models.Thresholding()
+    stepfunction = cd_models.StepFunctionModel(n_stable=6)
 
     model = stepfunction
-    for aoi_id in dataset_helpers.get_all_ids(ds):
-        qualitative_testing(model, ds, aoi_id, save_plot=True)
+    for aoi_id in dataset_helpers.get_aoi_ids(ds):
+        qualitative_testing(model, ds, aoi_id, save_plot=False)
         # quantitative_testing(model, ds, aoi_id)
     # quantitative_testing_dataset(model, ds)
 

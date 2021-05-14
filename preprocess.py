@@ -8,6 +8,7 @@ ROOT_PATH = Path('/storage/shafner')
 PATH_OSCD_DATASET = Path('/storage/shafner/urban_change_detection/OSCD_dataset')
 PATH_OSCD_MULTITEMPORAL_DATASET = Path('/storage/shafner/continuous_urban_change_detection/oscd_multitemporal_dataset')
 
+
 # helper function to get date from label file name
 # global_monthly_2020_01_mosaic_L15-1335E-1166N_5342_3524_13_Buildings.geojson
 def get_date(label_file: Path) -> tuple:
@@ -18,56 +19,49 @@ def get_date(label_file: Path) -> tuple:
 
 
 # helper function to check if mask exists for time stamp
-def has_mask(dataset: str, site_name: str, year: int, month: int) -> bool:
-    mask_path = ROOT_PATH / 'spacenet7' / dataset / site_name / 'UDM_masks'
-    mask_file = mask_path / f'global_monthly_{year}_{month:02d}_mosaic_{site_name}_UDM.tif'
+def has_mask(aoi_id: str, year: int, month: int) -> bool:
+    mask_path = dataset_helpers.spacenet7_path() / 'train' / aoi_id / 'UDM_masks'
+    mask_file = mask_path / f'global_monthly_{year}_{month:02d}_mosaic_{aoi_id}_UDM.tif'
     return mask_file.exists()
 
 
 # creates data frame with columns: aoi_id; year; month; mask
-def assemble_spacenet7_metadata(dataset: str):
-    sn7_path = ROOT_PATH / 'spacenet7'
-    dataset_path = sn7_path / dataset
-    data = {'aoi_id': [], 'year': [], 'month': [], 'mask': []}
+def assemble_spacenet7_timestamps():
+    dataset_path = dataset_helpers.spacenet7_path() / 'train'
+    data = {}
+    aoi_paths = [f for f in dataset_path.iterdir() if f.is_dir()]
 
-    site_paths = [f for f in dataset_path.iterdir() if f.is_dir()]
+    # processing each aoi
+    for aoi_path in aoi_paths:
 
-    def process_site(site_path: Path):
-        site_name = site_path.name
-        labels_path = site_path / 'labels_match'
+        # initializing aoi
+        aoi_id = aoi_path.name
+
+        # getting timestamps from labels
+        labels_path = aoi_path / 'labels_match'
         label_files = [f for f in labels_path.glob('**/*')]
-
         dates = [get_date(label_file) for label_file in label_files]
-        # sort the dates
+
+        # sort timestamps by dates (ascending)
         dates = sorted(dates, key=lambda date: date[0] * 12 + date[1])
+        aoi_data = [(*d, has_mask(aoi_id, *d)) for d in dates]
+        data[aoi_id] = aoi_data
 
-        for year, month in dates:
-            data['aoi_id'].append(site_name)
-            data['year'].append(year)
-            data['month'].append(month)
-            data['mask'].append(has_mask(dataset, site_name, year, month))
-
-    for site_path in site_paths:
-        process_site(site_path)
-
-    df = pd.DataFrame.from_dict(data)
-    print(df.shape)
-    output_file = sn7_path / 'sn7_timestamps.csv'
-    df.to_csv(output_file)
+    output_file = dataset_helpers.dataset_path('spacenet7') / 'spacenet7_timestamps.json'
+    geofiles.write_json(output_file, data)
 
 
 # merges buildings from a time series for a site into one geojson file
-def assemble_spacenet7_buildings(dataset: str):
-    sn7_path = ROOT_PATH / 'spacenet7'
-    dataset_path = sn7_path / dataset
-    site_paths = [f for f in dataset_path.iterdir() if f.is_dir()]
+def assemble_spacenet7_buildings():
+    dataset_path = dataset_helpers.spacenet7_path() / 'train'
+    aoi_paths = [f for f in dataset_path.iterdir() if f.is_dir()]
 
-    for site_path in site_paths:
-        site = site_path.name
-        print(f'processing site: {site}')
+    for aoi_path in aoi_paths:
+        aoi_id = aoi_path.name
+        print(f'processing aoi: {aoi_id}')
         all_buildings = None
 
-        labels_path = site_path / 'labels_match'
+        labels_path = aoi_path / 'labels_match'
         label_files = [f for f in labels_path.glob('**/*')]
 
         for label_file in tqdm(label_files):
@@ -86,40 +80,74 @@ def assemble_spacenet7_buildings(dataset: str):
 
             all_buildings['features'].extend(features)
 
-        output_file = sn7_path / 'buildings_assembled' / f'buildings_{site}.geojson'
+        output_file = dataset_helpers.spacenet7_path() / 'buildings_assembled' / f'buildings_{aoi_id}.geojson'
         geofiles.write_json(output_file, all_buildings)
 
 
-def generate_spacenet7_dataset_file(path_to_spacenet7_s1s2_dataset: Path):
-    root_path = path_to_spacenet7_s1s2_dataset
-    timestamps_file = ROOT_PATH / 'spacenet7' / 'sn7_timestamps.csv'
-    df = pd.read_csv(timestamps_file)
+# merges masks from a time series into a single geotiff file
+def assemble_spacenet7_masks():
 
-    missing_aois = geofiles.load_json(Path('missing_aois.json'))
+    aoi_ids = dataset_helpers.get_aoi_ids('spacenet7', exclude_missing=False)
+
+    for aoi_id in aoi_ids:
+        print(f'processing aoi: {aoi_id}')
+
+        masks_path = dataset_helpers.spacenet7_path() / 'train' / aoi_id / 'UDM_masks'
+        mask_files = [f for f in masks_path.glob('**/*') if f.is_file()]
+
+        if not mask_files:
+            continue
+
+        def date_value(file: Path):
+            _, _, year, month, *_ = file.stem.split('_')
+            return int(year) * 12 + int(month)
+        mask_files = sorted(mask_files, key=lambda f: date_value(f))
+
+        masks = None
+        for i, mask_file in enumerate(tqdm(mask_files)):
+
+            mask, geotransform, crs = geofiles.read_tif(mask_file, first_band_only=True)
+            if masks is None:
+                masks = np.zeros((*mask.shape, len(mask_files)), dtype=np.uint8)
+
+            masks[:, :, i] = mask / 255
+
+        output_file = dataset_helpers.spacenet7_path() / 'masks_assembled' / f'masks_{aoi_id}.tif'
+        geofiles.write_tif(output_file, masks, geotransform, crs)
+
+
+def generate_spacenet7_metadata_file():
+
+    timestamps = dataset_helpers.spacenet7_timestamps()
+    bad_data = dataset_helpers.bad_data('spacenet7')
+    missing_aois = dataset_helpers.missing_aois()
 
     data = {
         's1_bands': ['VV', 'VH'],
         's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
-        'sites': {}
+        'aois': {}
     }
 
-    for index, row in df.iterrows():
-        aoi_id = row['aoi_id']
-        aoi_data = [int(row['year']), int(row['month']), row['mask']]
+    for aoi_id in timestamps.keys():
 
+        # skip aoi if it's missing
         if aoi_id in missing_aois:
             continue
 
-        if aoi_id not in data['sites'].keys():
-            data['sites'][aoi_id] = []
-        data['sites'][aoi_id].append(aoi_data)
+        # put together metadata for aoi_id
+        aoi_data = []
+        aoi_timestamps = timestamps[aoi_id]
+        for i, timestamp in enumerate(aoi_timestamps):
+            year, month, mask = timestamp
 
-    for aoi_id in data['sites'].keys():
-        aoi_data = data['sites'][aoi_id]
-        aoi_data = sorted(aoi_data, key=lambda date: date[0] * 12 + date[1])
-        data['sites'][aoi_id] = aoi_data
+            # check if satellite data is ok for timestamp in aoi based on bad data file
+            s1 = False if i in bad_data[aoi_id]['S1'] else True
+            s2 = False if i in bad_data[aoi_id]['S2'] else True
+            timestamp_data = [year, month, mask, s1, s2]
+            aoi_data.append(timestamp_data)
+        data['aois'][aoi_id] = aoi_data
 
-    output_file = root_path / f'metadata.json'
+    output_file = dataset_helpers.dataset_path('spacenet7') / f'metadata.json'
     geofiles.write_json(output_file, data)
 
 
@@ -171,7 +199,9 @@ def produce_oscd_change_labels(path_oscd_dataset: Path, path_oscd_multitemporal_
 
 
 if __name__ == '__main__':
+    # generate_spacenet7_metadata_file()
+    assemble_spacenet7_masks()
     # assemble_buildings('train')
     # generate_spacenet7_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
     # generate_oscd_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'oscd_multitemporal_dataset')
-    produce_oscd_change_labels(PATH_OSCD_DATASET, PATH_OSCD_MULTITEMPORAL_DATASET)
+    # produce_oscd_change_labels(PATH_OSCD_DATASET, PATH_OSCD_MULTITEMPORAL_DATASET)

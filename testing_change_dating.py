@@ -7,17 +7,17 @@ import numpy as np
 
 def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, save_plot: bool = False):
 
-    dates = dataset_helpers.get_timeseries('spacenet7_s1s2_dataset', aoi_id)
-    pred_change_date = model.change_dating('spacenet7_s1s2_dataset', aoi_id)
+    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id)
+    pred_change_date = model.change_dating('spacenet7', aoi_id)
 
     fig = plt.figure(figsize=(25, 7))
     ph = 20  # plot height
     grid = plt.GridSpec(ph+1, 4, wspace=0.1, hspace=0.1)
     ax_t1 = fig.add_subplot(grid[:ph, 0])
-    visualization.plot_optical(ax_t1, 'spacenet7_s1s2_dataset', aoi_id, *dates[0][:-1])
+    visualization.plot_optical(ax_t1, 'spacenet7', aoi_id, *dates[0][:-1])
     ax_t1.set_title('S2 Start TS', fontsize=20)
     ax_t2 = fig.add_subplot(grid[:ph, 1])
-    visualization.plot_optical(ax_t2, 'spacenet7_s1s2_dataset', aoi_id, *dates[-1][:-1])
+    visualization.plot_optical(ax_t2, 'spacenet7', aoi_id, *dates[-1][:-1])
     ax_t2.set_title('S2 End TS', fontsize=20)
 
     ax_gt = fig.add_subplot(grid[:ph, 2])
@@ -43,7 +43,7 @@ def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, save_p
 
 def quantitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str):
     label_change_date = label_helpers.generate_change_date_label(aoi_id)
-    pred_change_date = model.change_dating('spacenet7_s1s2_dataset', aoi_id)
+    pred_change_date = model.change_dating('spacenet7', aoi_id)
 
     correct_change = np.logical_and(label_change_date != 0, pred_change_date != 0)
     sdiff = np.square(label_change_date - pred_change_date)
@@ -56,9 +56,9 @@ def quantitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str):
 def quantitative_testing_dataset(model: cd_models.ChangeDatingMethod):
     all_sdiff = []
     n_total = 0
-    for aoi_id in tqdm(dataset_helpers.get_all_ids('spacenet7_s1s2_dataset')):
+    for aoi_id in tqdm(dataset_helpers.get_aoi_ids('spacenet7')):
         label_change_date = label_helpers.generate_change_date_label(aoi_id)
-        pred_change_date = model.change_dating('spacenet7_s1s2_dataset', aoi_id)
+        pred_change_date = model.change_dating('spacenet7', aoi_id)
 
         correct_change = np.logical_and(label_change_date != 0, pred_change_date != 0)
         sdiff = np.square(label_change_date - pred_change_date)
@@ -74,14 +74,11 @@ def quantitative_testing_dataset(model: cd_models.ChangeDatingMethod):
 
 if __name__ == '__main__':
 
-    cfg = 'fusionda_cons05_jaccardmorelikeloss'
-    model = cd_models.StepFunctionModel(cfg, n_stable=6)
-    # model = cd_models.ImprovedStepFunctionModel(cfg)
-    # model = cd_models.ImprovedStepFunctionModelV2(cfg)
+    model = cd_models.StepFunctionModel(n_stable=6)
 
-    aoi_ids = dataset_helpers.get_all_ids('spacenet7_s1s2_dataset')
+    aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for i, aoi_id in enumerate(aoi_ids):
         print(i)
-        # qualitative_testing(model, aoi_id, save_plot=False)
-        quantitative_testing(model, aoi_id)
+        qualitative_testing(model, aoi_id, save_plot=False)
+        # quantitative_testing(model, aoi_id)
     # quantitative_testing_dataset(model)

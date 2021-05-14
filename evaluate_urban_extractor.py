@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 
 def run_urban_extractor_evaluation(config_name: str, aoi_id: str):
-    length_ts = dataset_helpers.length_timeseries('spacenet7_s1s2_dataset', aoi_id)
+    length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id)
     f1_scores, precisions, recalls = [], [], []
 
     for i in range(length_ts):
@@ -72,14 +72,17 @@ def show_f1_evaluation(config_name: str):
 
     data = []
 
-    aoi_ids = dataset_helpers.get_all_ids('spacenet7_s1s2_dataset')
+    aoi_ids = dataset_helpers.get_all_ids('spacenet7')
     for aoi_id in tqdm(aoi_ids):
-        length_ts = dataset_helpers.length_timeseries('spacenet7_s1s2_dataset', aoi_id)
+        if aoi_id in dataset_helpers.missing_aois():
+            continue
+
+        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id)
         f1_scores, precisions, recalls = [], [], []
 
         for i in range(length_ts):
             label = label_helpers.load_label_in_timeseries(aoi_id, i)
-            pred = prediction_helpers.load_prediction_in_timeseries(config_name, 'spacenet7_s1s2_dataset', aoi_id, i)
+            pred = prediction_helpers.load_prediction_in_timeseries(config_name, 'spacenet7', aoi_id, i)
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
 
@@ -105,7 +108,7 @@ def show_f1_evaluation(config_name: str):
 
 if __name__ == '__main__':
     config_name = 'fusionda_cons05_jaccardmorelikeloss'
-    for aoi_id in dataset_helpers.load_aoi_selection():
+    for aoi_id in dataset_helpers.get_all_ids('spacenet7'):
         # run_urban_extractor_evaluation(config_name, aoi_id)
         pass
 

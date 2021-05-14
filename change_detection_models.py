@@ -6,9 +6,8 @@ from utils import prediction_helpers, dataset_helpers
 
 class ChangeDetectionMethod(ABC):
 
-    def __init__(self, name: str, config_name: str):
+    def __init__(self, name: str):
         self.name = name
-        self.config_name = config_name
 
     @ abstractmethod
     # returns binary array of changes
@@ -18,8 +17,8 @@ class ChangeDetectionMethod(ABC):
 
 class ChangeDatingMethod(ChangeDetectionMethod):
 
-    def __init__(self, name: str, config_name: str):
-        super().__init__(name, config_name)
+    def __init__(self, name: str):
+        super().__init__(name)
 
     @ abstractmethod
     # returns int array where numbers correspond to change date (index in dates list)
@@ -29,8 +28,8 @@ class ChangeDatingMethod(ChangeDetectionMethod):
 
 class StepFunctionModel(ChangeDatingMethod):
 
-    def __init__(self, config_name: str, n_stable: int = 2, max_error: float = 0.5, ts_extension: int = 0):
-        super().__init__('stepfunction', config_name)
+    def __init__(self, n_stable: int = 2, max_error: float = 0.5, ts_extension: int = 0):
+        super().__init__('stepfunction')
         self.fitted_dataset = None
         self.fitted_aoi = None
         # index when changed occurred in the time series
@@ -61,7 +60,7 @@ class StepFunctionModel(ChangeDatingMethod):
         dates = dataset_helpers.get_timeseries(dataset, aoi_id)
         self.length_ts = len(dates)
 
-        probs_cube = prediction_helpers.load_prediction_timeseries(self.config_name, dataset, aoi_id, self.ts_extension)
+        probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, self.ts_extension)
         data_shape = probs_cube.shape
 
         # fitting stable functions
@@ -104,7 +103,7 @@ class StepFunctionModel(ChangeDatingMethod):
     def model_error(self, dataset: str, aoi_id: str) -> np.ndarray:
         self._fit(dataset, aoi_id)
         y_pred = self._predict(dataset, aoi_id)
-        probs = prediction_helpers.load_prediction_timeseries(self.config_name, dataset, aoi_id)
+        probs = prediction_helpers.load_prediction_timeseries(dataset, aoi_id)
         return np.sqrt(self._mse(probs, y_pred))
 
     def model_confidence(self, dataset: str, aoi_id: str) -> np.ndarray:
@@ -133,9 +132,9 @@ class StepFunctionModel(ChangeDatingMethod):
 
 class DeepChangeVectorAnalysis(ChangeDetectionMethod):
 
-    def __init__(self, config_name: str, thresholding_method: str = 'global_otsu', subset_features: bool = False,
+    def __init__(self, thresholding_method: str = 'global_otsu', subset_features: bool = False,
                  percentile: int = 90):
-        super().__init__('dcva', config_name)
+        super().__init__('dcva')
         self.thresholding_method = thresholding_method
         self.subset_features = subset_features
         self.percentile = percentile
@@ -163,8 +162,8 @@ class DeepChangeVectorAnalysis(ChangeDetectionMethod):
 
     def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
 
-        features_start = prediction_helpers.load_features_in_timeseries(self.config_name, dataset, aoi_id, 0)
-        features_end = prediction_helpers.load_features_in_timeseries(self.config_name, dataset, aoi_id, -1)
+        features_start = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, 0)
+        features_end = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, -1)
 
         if self.subset_features:
             features_selection = self._get_feature_selection(features_start, features_end)
@@ -181,8 +180,8 @@ class DeepChangeVectorAnalysis(ChangeDetectionMethod):
 
 class PostClassificationComparison(ChangeDetectionMethod):
 
-    def __init__(self, config_name: str, threshold: float = 0.5, ignore_negative_changes: bool = False):
-        super().__init__('postclassification', config_name)
+    def __init__(self, threshold: float = 0.5, ignore_negative_changes: bool = False):
+        super().__init__('postclassification')
         self.threshold = threshold
         self.ignore_negative_changes = ignore_negative_changes
 
@@ -190,8 +189,8 @@ class PostClassificationComparison(ChangeDetectionMethod):
         dates = dataset_helpers.get_timeseries(dataset, aoi_id)
         start_date = dates[0][:-1]
         end_date = dates[-1][:-1]
-        probs_start = prediction_helpers.load_prediction(self.config_name, dataset, aoi_id, *start_date)
-        probs_end = prediction_helpers.load_prediction(self.config_name, dataset, aoi_id, *end_date)
+        probs_start = prediction_helpers.load_prediction(dataset, aoi_id, *start_date)
+        probs_end = prediction_helpers.load_prediction(dataset, aoi_id, *end_date)
         class_start = probs_start > self.threshold
         class_end = probs_end > self.threshold
         if self.ignore_negative_changes:
@@ -204,15 +203,15 @@ class PostClassificationComparison(ChangeDetectionMethod):
 
 class Thresholding(ChangeDetectionMethod):
 
-    def __init__(self, config_name: str):
-        super().__init__('thresholding', config_name)
+    def __init__(self):
+        super().__init__('thresholding')
 
     def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
         dates = dataset_helpers.get_timeseries(dataset, aoi_id)
         start_date = dates[0][:-1]
         end_date = dates[-1][:-1]
-        probs_start = prediction_helpers.load_prediction(self.config_name, dataset, aoi_id, *start_date)
-        probs_end = prediction_helpers.load_prediction(self.config_name, dataset, aoi_id, *end_date)
+        probs_start = prediction_helpers.load_prediction(dataset, aoi_id, *start_date)
+        probs_end = prediction_helpers.load_prediction(dataset, aoi_id, *end_date)
 
         difference = np.abs(probs_end - probs_start)
 
