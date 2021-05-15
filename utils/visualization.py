@@ -73,8 +73,15 @@ def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'V
 
 
 def plot_buildings(ax, aoi_id: str, year: int, month: int):
-    buildings = label_helpers.load_label(aoi_id, year, month) > 0
-    ax.imshow(buildings, cmap='gray', vmin=0, vmax=1)
+    buildings = label_helpers.load_label(aoi_id, year, month)
+    isnan = np.isnan(buildings)
+    if np.sum(isnan) > 0:
+        debug = True
+    buildings = buildings.astype(np.uint8)
+    buildings[isnan] = 2
+    colors4cmap = np.array([[0, 0, 0, 1], [1, 1, 1, 1], [1, 0, 0, 1]])
+    cmap = colors.ListedColormap(colors4cmap)
+    ax.imshow(buildings, cmap=cmap, vmin=0, vmax=2)
     ax.set_xticks([])
     ax.set_yticks([])
 
