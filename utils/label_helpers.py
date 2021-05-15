@@ -6,9 +6,9 @@ def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
     buildings_path = dataset_helpers.dataset_path('spacenet7') / aoi_id / 'buildings'
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
-    label = np.squeeze(label > 0)
+    label = np.squeeze(label > 0).astype(np.float)
     mask = mask_helpers.load_mask('spacenet7', aoi_id, year, month)
-    label[mask] = np.NaN
+    label = np.where(~mask, label, np.NaN)
     return label
 
 
@@ -22,7 +22,7 @@ def load_label_in_timeseries(aoi_id: str, index: int, include_masked_data: bool 
 
 def load_label_timeseries(aoi_id: str, include_masked_data: bool = False, ignore_bad_data: bool = False) -> np.ndarray:
     dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data, ignore_bad_data)
-    label_cube = np.zeros((*dataset_helpers.get_yx_size('spacenet7', aoi_id), len(dates)), dtype=np.bool)
+    label_cube = np.zeros((*dataset_helpers.get_yx_size('spacenet7', aoi_id), len(dates)), dtype=np.float)
     for i, (year, month, *_) in enumerate(dates):
         label = load_label(aoi_id, year, month)
         label_cube[:, :, i] = label
@@ -34,11 +34,8 @@ def generate_change_label(dataset: str, aoi_id: str, include_masked_data: bool =
     # computing it for spacenet7 (change between first and last label)
     if dataset == 'spacenet7':
         label_start = load_label_in_timeseries(aoi_id, 0, include_masked_data, ignore_bad_data)
-        assert(np.sum(np.isnan(label_start)) == 0)
         label_end = load_label_in_timeseries(aoi_id, -1, include_masked_data, ignore_bad_data)
-        assert (np.sum(np.isnan(label_end)) == 0)
         change = np.array(label_start != label_end)
-
     # for oscd the change label corresponds to the normal label
     else:
         label_file = dataset_helpers.dataset_path('oscd') / aoi_id / f'change_{aoi_id}.tif'
@@ -53,16 +50,12 @@ def generate_change_date_label(aoi_id: str, include_masked_data: bool = False,
 
     change_date_label = np.zeros((dataset_helpers.get_yx_size('spacenet7', aoi_id)), dtype=np.uint8)
 
-    # assumes that first label is not NaN
     last_nonnan_label = label_cube[:, :, 0]
-    assert(np.sum(np.isnan(last_nonnan_label)) == 0)
-
     for i in range(1, length_ts):
 
         prev_label, current_label = label_cube[:, :, i-1], label_cube[:, :, i]
 
         n_nan = np.sum(np.isnan(current_label))
-        print(f'{i} {n_nan}')
         if n_nan > 0:
             debug = True
 

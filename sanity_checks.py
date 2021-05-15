@@ -90,10 +90,10 @@ def sanity_check_buildings_label(dataset: str, aoi_id: str, include_masked_data:
 
 
 def sanity_check_masks(dataset: str, aoi_id, save_plot: bool = False):
+
     ts = dataset_helpers.get_timeseries(dataset, aoi_id, True)
     ts_masked = [[y, m, mask, *_] for y, m, mask, *_ in ts if mask]
-    if len(ts_masked) < 5:
-        # TODO make it work for len 1
+    if not ts_masked:
         return
 
     n_rows, n_cols = 2, len(ts_masked)
@@ -101,11 +101,14 @@ def sanity_check_masks(dataset: str, aoi_id, save_plot: bool = False):
 
     fig, axs = plt.subplots(n_rows, n_cols, figsize=(n_cols * plot_size, n_rows * plot_size))
 
-    for i, (year, month, *_) in enumerate(tqdm(ts_masked)):
-        visualization.plot_optical(axs[0, i], dataset, aoi_id, year, month)
+    for i, (year, month, *_) in enumerate(ts_masked):
+        ax_optical = axs[0, i] if len(ts_masked) > 1 else axs[0]
+        visualization.plot_optical(ax_optical, dataset, aoi_id, year, month)
         title = f'{year}-{month:02d}'
-        axs[0, i].set_title(title, c='k', fontsize=16, fontweight='bold')
-        visualization.plot_buildings(axs[1, i], aoi_id, year, month)
+        ax_optical.set_title(title, c='k', fontsize=16, fontweight='bold')
+
+        ax_buildings = axs[1, i] if len(ts_masked) > 1 else axs[1]
+        visualization.plot_buildings(ax_buildings, aoi_id, year, month)
 
     if not save_plot:
         plt.show()
@@ -118,17 +121,31 @@ def sanity_check_masks(dataset: str, aoi_id, save_plot: bool = False):
 
 
 def sanity_check_mask_numbers(dataset: str, aoi_id: str):
+    ts = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data=True, ignore_bad_data=False)
+    ts_masked = [[y, m, mask, *_] for y, m, mask, *_ in ts if mask]
 
+    # testing if masks file is available for all aois with at least 1 masked timestamp
+    masks_file = dataset_helpers.dataset_path(dataset) / aoi_id / f'masks_{aoi_id}.tif'
+    if ts_masked and not masks_file.exists():
+        raise Exception(f'Missing masks file: {masks_file.stem}')
+
+    if mask_helpers.has_masked_timestamps(dataset, aoi_id):
+        masks = mask_helpers.load_masks(dataset, aoi_id)
+        n_masked = masks.shape[-1]
+        if n_masked != len(ts_masked):
+            msg = f'{aoi_id}: N masked timestamps {len(ts_masked)} differs from n available masks {n_masked}!'
+            raise Exception(msg)
 
 
 if __name__ == '__main__':
     ds = 'spacenet7'
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        # sanity_check_change_detection_label(ds, aoi_id, include_masked_data=True, save_plot=False)
-        # sanity_check_change_dating_label(ds, aoi_id, include_masked_data=True, save_plot=True)
-        sanity_check_masks(ds, aoi_id, save_plot=False)
+        # sanity_check_change_detection_label(ds, aoi_id, include_masked_data=True, save_plot=True)
+        sanity_check_change_dating_label(ds, aoi_id, include_masked_data=True, save_plot=True)
+        # sanity_check_masks(ds, aoi_id, save_plot=True)
+        # sanity_check_mask_numbers(ds, aoi_id)
         pass
 
     # sanity_check_change_detection_label(ds, 'L15-0331E-1257N_1327_3160_13', include_masked_data=False, save_plot=False)
-    # sanity_check_change_dating_label(ds, 'L15-1479E-1101N_5916_3785_13', include_masked_data=True, save_plot=False)
+    # sanity_check_change_dating_label(ds, 'L15-0586E-1127N_2345_3680_13', include_masked_data=True, save_plot=False)
     # sanity_check_buildings_label(ds, 'L15-1479E-1101N_5916_3785_13', include_masked_data=True, save_plot=False)

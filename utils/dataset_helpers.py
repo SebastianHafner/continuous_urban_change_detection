@@ -1,13 +1,14 @@
 from pathlib import Path
 from utils import geofiles
 import numpy as np
-import preprocess
+import preprocess_spacenet7
+import preprocess_oscd
 
 # GLOBAL VARIABLES
 ROOT_PATH = '/storage/shafner/continuous_urban_change_detection'
 SPACENET7_PATH = '/storage/shafner/spacenet7'  # this is the origin SpaceNet7 dataset
 SPACENET7_DATASET_NAME = 'spacenet7_s1s2_dataset_v2'
-OSCD_DATASET_NAME = 'oscd_multitemporal_dataset'
+OSCD_DATASET_NAME = 'oscd_s1s2_dataset'
 CONFIG_NAME = 'fusionda_cons05_jaccardmorelikeloss'
 
 
@@ -39,7 +40,7 @@ def spacenet7_path() -> Path:
 
 
 def bad_data(dataset: str) -> dict:
-    bad_data_file = Path.cwd() / f'bad_data_{dataset_name(dataset)}.json'
+    bad_data_file = Path.cwd() / 'bad_data' / f'bad_data_{dataset_name(dataset)}.json'
     bad_data = geofiles.load_json(bad_data_file)
     return bad_data
 
@@ -53,15 +54,19 @@ def missing_aois() -> list:
 def spacenet7_timestamps() -> dict:
     timestamps_file = dataset_path('spacenet7') / 'spacenet7_timestamps.json'
     if not timestamps_file.exists():
-        preprocess.assemble_spacenet7_timestamps()
+        preprocess_spacenet7.assemble_spacenet7_timestamps()
     assert(timestamps_file.exists())
     timestamps = geofiles.load_json(timestamps_file)
     return timestamps
 
 
-# TODO: implement this
 def oscd_timestamps() -> dict:
-    pass
+    timestamps_file = dataset_path('oscd') / 'oscd_timestamps.json'
+    if not timestamps_file.exists():
+        preprocess_oscd.assemble_oscd_timestamps()
+    assert (timestamps_file.exists())
+    timestamps = geofiles.load_json(timestamps_file)
+    return timestamps
 
 
 def timestamps(dataset: str) -> dict:
@@ -77,7 +82,7 @@ def oscd_metadata() -> dict:
 def spacenet7_metadata() -> dict:
     metadata_file = dataset_path('spacenet7') / 'metadata.json'
     if not metadata_file.exists():
-        preprocess.generate_spacenet7_metadata_file()
+        preprocess_spacenet7.generate_spacenet7_metadata_file()
     assert (metadata_file.exists())
     metadata = geofiles.load_json(metadata_file)
     return metadata
@@ -118,6 +123,10 @@ def get_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
     if ignore_bad_data:
         if include_masked_data:
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in timeseries if s1 and s2]
+            # trim time series at beginning and end such that it starts and ends with an unmasked timestamp
+            unmasked_indices = [i for i, (_, _, mask, *_) in enumerate(timeseries) if not mask]
+            min_unmasked, max_unmasked = min(unmasked_indices), max(unmasked_indices)
+            timeseries = timeseries[min_unmasked:max_unmasked + 1]
         else:
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in timeseries if not mask and (s1 and s2)]
     return timeseries
@@ -131,8 +140,11 @@ def length_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = Fal
 
 def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
     ts = timestamps(dataset)
-    aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
-    return aoi_ids
+    if dataset == 'spacenet7':
+        aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
+    else:
+        aoi_ids = ts.keys()
+    return sorted(aoi_ids)
 
 
 # TODO: make this alos work for OSCD dataset
@@ -144,6 +156,7 @@ def get_geo(dataset: str, aoi_id: str) -> tuple:
     return transform, crs
 
 
+# TODO: would make sense to cache xy size
 def get_yx_size(dataset: str, aoi_id: str) -> tuple:
     folder = dataset_path(dataset) / aoi_id / 'sentinel1'
     file = [f for f in folder.glob('**/*') if f.is_file()][0]

@@ -1,12 +1,7 @@
-import pandas as pd
 from pathlib import Path
-from utils import geofiles, dataset_helpers, label_helpers
+from utils import geofiles, dataset_helpers
 from tqdm import tqdm
 import numpy as np
-
-ROOT_PATH = Path('/storage/shafner')
-PATH_OSCD_DATASET = Path('/storage/shafner/urban_change_detection/OSCD_dataset')
-PATH_OSCD_MULTITEMPORAL_DATASET = Path('/storage/shafner/continuous_urban_change_detection/oscd_multitemporal_dataset')
 
 
 # helper function to get date from label file name
@@ -25,7 +20,7 @@ def has_mask(aoi_id: str, year: int, month: int) -> bool:
     return mask_file.exists()
 
 
-# creates data frame with columns: aoi_id; year; month; mask
+# creates dict with aoi_ids as keys and with timestamps of SpaceNet7 dataset as values
 def assemble_spacenet7_timestamps():
     dataset_path = dataset_helpers.spacenet7_path() / 'train'
     data = {}
@@ -151,57 +146,9 @@ def generate_spacenet7_metadata_file():
     geofiles.write_json(output_file, data)
 
 
-def generate_oscd_dataset_file(path_to_oscd_multitemporal_dataset: Path):
-    root_path = path_to_oscd_multitemporal_dataset
-    aoi_ids = [f.stem for f in root_path.iterdir() if f.is_dir()]
-
-    data = {
-        's1_bands': ['VV', 'VH'],
-        's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
-        'sites': {}
-    }
-
-    def filename2date(filename: Path) -> tuple:
-        parts = filename.stem.split('_')
-        return int(parts[-2]), int(parts[-1]), False
-
-    for index, aoi_id in enumerate(aoi_ids):
-
-        path_files = root_path / aoi_id / 'sentinel2'
-        dates = [filename2date(f) for f in path_files.glob('**/*') if f.is_file()]
-        dates = sorted(dates, key=lambda x: x[0] * 12 + x[1])
-
-        data['sites'][aoi_id] = dates
-
-    output_file = root_path / f'metadata.json'
-    geofiles.write_json(output_file, data)
-
-
-def produce_oscd_change_labels(path_oscd_dataset: Path, path_oscd_multitemporal_dataset: Path):
-    root_path = path_oscd_multitemporal_dataset
-    aoi_ids = [f.stem for f in root_path.iterdir() if f.is_dir()]
-    for aoi_id in aoi_ids:
-        change_label_file = path_oscd_dataset / 'labels' / aoi_id / 'cm' / f'{aoi_id}-cm.tif'
-        # does not contain geographical information
-        change, _, _ = geofiles.read_tif(change_label_file)
-
-        # change label value range from [1, 2] to [0, 1] by subtracting one
-        change = change - 1
-
-        # reading geographical information from sentinel 2 file
-        s2_path = path_oscd_multitemporal_dataset / aoi_id / 'sentinel2'
-        s2_file = [f for f in s2_path.glob('**/*') if f.is_file()][0]
-        _, geotransform, crs = geofiles.read_tif(s2_file)
-
-        to_file = path_oscd_multitemporal_dataset / aoi_id / f'change_{aoi_id}.tif'
-        geofiles.write_tif(to_file, change.astype(np.uint8), geotransform, crs)
-    pass
-
-
 if __name__ == '__main__':
+    assemble_spacenet7_timestamps()
     generate_spacenet7_metadata_file()
     # assemble_spacenet7_masks()
     # assemble_buildings('train')
     # generate_spacenet7_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
-    # generate_oscd_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'oscd_multitemporal_dataset')
-    # produce_oscd_change_labels(PATH_OSCD_DATASET, PATH_OSCD_MULTITEMPORAL_DATASET)

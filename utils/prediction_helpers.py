@@ -38,9 +38,9 @@ def load_prediction(dataset: str, aoi_id: str, year: int, month: int):
     return pred
 
 
-def load_prediction_in_timeseries(dataset: str, aoi_id: str, index: int,
+def load_prediction_in_timeseries(dataset: str, aoi_id: str, index: int, include_masked_data: bool = False,
                                   ignore_bad_data: bool = True) -> np.ndarray:
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id, ignore_bad_data)
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data, ignore_bad_data)
     year, month, *_ = dates[index]
     pred = load_prediction(dataset, aoi_id, year, month)
     return pred

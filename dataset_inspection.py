@@ -125,9 +125,9 @@ def visualize_timeseries_length(dataset: str):
 
 
 if __name__ == '__main__':
-    ds = 'spacenet7'
+    ds = 'oscd'
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        # visualize_satellite_data(ds, aoi_id, save_plot=True)
+        visualize_satellite_data(ds, aoi_id, save_plot=True)
         # visualize_all_data(ds, aoi_id, config_name=cfg, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         pass

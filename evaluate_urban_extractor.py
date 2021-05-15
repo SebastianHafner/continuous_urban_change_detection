@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
-def run_urban_extractor_evaluation(config_name: str, aoi_id: str):
+def run_urban_extractor_evaluation(config_name: str, aoi_id: str, include_masked_data: bool = False):
     length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id)
     f1_scores, precisions, recalls = [], [], []
 
@@ -68,21 +68,19 @@ def show_precision_recall_evaluation(config_name: str):
     plt.show()
 
 
-def show_f1_evaluation(config_name: str):
+def show_f1_evaluation(include_masked_data: bool = False):
 
     data = []
 
-    aoi_ids = dataset_helpers.get_all_ids('spacenet7')
+    aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for aoi_id in tqdm(aoi_ids):
-        if aoi_id in dataset_helpers.missing_aois():
-            continue
 
-        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id)
+        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, include_masked_data)
         f1_scores, precisions, recalls = [], [], []
 
         for i in range(length_ts):
-            label = label_helpers.load_label_in_timeseries(aoi_id, i)
-            pred = prediction_helpers.load_prediction_in_timeseries(config_name, 'spacenet7', aoi_id, i)
+            label = label_helpers.load_label_in_timeseries(aoi_id, i, include_masked_data)
+            pred = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i, include_masked_data)
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
 
@@ -107,9 +105,8 @@ def show_f1_evaluation(config_name: str):
 
 
 if __name__ == '__main__':
-    config_name = 'fusionda_cons05_jaccardmorelikeloss'
-    for aoi_id in dataset_helpers.get_all_ids('spacenet7'):
+    for aoi_id in dataset_helpers.get_aoi_ids('spacenet7'):
         # run_urban_extractor_evaluation(config_name, aoi_id)
         pass
 
-    show_f1_evaluation(config_name)
+    show_f1_evaluation(include_masked_data=True)

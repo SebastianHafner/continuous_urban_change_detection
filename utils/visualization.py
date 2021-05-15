@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 import matplotlib as mpl
-from utils import geofiles, dataset_helpers, label_helpers, prediction_helpers
+from utils import geofiles, dataset_helpers, label_helpers, prediction_helpers, mask_helpers
 import numpy as np
 from pathlib import Path
 from matplotlib import cm
@@ -17,7 +16,7 @@ class DateColorMap(object):
         cmap_colors = np.zeros((ts_length, 4))
         cmap_colors[0, :] = no_change_color
         cmap_colors[1:, :] = dates_colors
-        self.cmap = colors.ListedColormap(cmap_colors)
+        self.cmap = mpl.colors.ListedColormap(cmap_colors)
 
     def get_cmap(self):
         return self.cmap
@@ -39,7 +38,7 @@ class ChangeConfidenceColorMap(object):
         cmap_colors = np.zeros((n, 4))
         cmap_colors[0, :] = no_change_color
         cmap_colors[1:, :] = confidence_colors
-        self.cmap = colors.ListedColormap(cmap_colors)
+        self.cmap = mpl.colors.ListedColormap(cmap_colors)
 
     def get_cmap(self):
         return self.cmap
@@ -47,6 +46,8 @@ class ChangeConfidenceColorMap(object):
 
 def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'true_color',
                  scale_factor: float = 0.4):
+    ax.set_xticks([])
+    ax.set_yticks([])
     file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
@@ -55,11 +56,12 @@ def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str 
     bands = img[:, :, band_indices] / scale_factor
     bands = bands.clip(0, 1)
     ax.imshow(bands)
-    ax.set_xticks([])
-    ax.set_yticks([])
+
 
 
 def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'VV'):
+    ax.set_xticks([])
+    ax.set_yticks([])
     file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
@@ -68,19 +70,15 @@ def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'V
     bands = img[:, :, band_index]
     bands = bands.clip(0, 1)
     ax.imshow(bands, cmap='gray')
-    ax.set_xticks([])
-    ax.set_yticks([])
 
 
 def plot_buildings(ax, aoi_id: str, year: int, month: int):
     buildings = label_helpers.load_label(aoi_id, year, month)
     isnan = np.isnan(buildings)
-    if np.sum(isnan) > 0:
-        debug = True
     buildings = buildings.astype(np.uint8)
-    buildings[isnan] = 2
-    colors4cmap = np.array([[0, 0, 0, 1], [1, 1, 1, 1], [1, 0, 0, 1]])
-    cmap = colors.ListedColormap(colors4cmap)
+    buildings = np.where(~isnan, buildings, 3)
+    colors = [(0, 0, 0), (1, 1, 1), (1, 0, 0)]
+    cmap = mpl.colors.ListedColormap(colors)
     ax.imshow(buildings, cmap=cmap, vmin=0, vmax=2)
     ax.set_xticks([])
     ax.set_yticks([])
@@ -98,21 +96,6 @@ def plot_change_date_label(ax, aoi_id: str, include_masked_data: bool = False):
     change_date_label = label_helpers.generate_change_date_label(aoi_id, include_masked_data)
     cmap = DateColorMap(len(ts))
     ax.imshow(change_date_label, cmap=cmap.get_cmap(), vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-
-def plot_endtoend_label(ax, arr: np.ndarray):
-    n_colors = 25
-    jet = cm.get_cmap('jet', n_colors)
-    newcolors = jet(np.linspace(0, 1, n_colors))
-    white = np.array([1, 1, 1, 1])
-    black = np.array([0, 0, 0, 1])
-    newcolors[0, :] = black
-    newcolors[1, :] = white
-    newcmp = colors.ListedColormap(newcolors)
-
-    ax.imshow(arr, cmap=newcmp, vmin=0, vmax=25)
     ax.set_xticks([])
     ax.set_yticks([])
 
@@ -152,6 +135,13 @@ def plot_change_confidence(ax, change: np.ndarray, confidence: np.ndarray, cmap:
 def plot_prediction(ax, dataset: str, aoi_id: str, year: int, month: int):
     pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
     ax.imshow(pred.clip(0, 1), cmap='gray')
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def plot_mask(ax, dataset: str, aoi_id: str, year: int, month: int):
+    mask = mask_helpers.load_mask(dataset, aoi_id, year, month)
+    ax.imshow(mask.astype(np.uint8), cmap='gray')
     ax.set_xticks([])
     ax.set_yticks([])
 

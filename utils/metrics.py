@@ -12,15 +12,18 @@ def compute_f1_score(y_pred: np.ndarray, y_true: np.ndarray) -> float:
 
 
 def compute_true_positives(y_pred: np.ndarray, y_true: np.ndarray) -> int:
-    return int(np.sum(np.logical_and(y_pred, y_true)))
+    is_not_nan = ~np.isnan(y_true)
+    return int(np.sum(np.logical_and(y_pred, y_true)[is_not_nan]))
 
 
 def compute_false_positives(y_pred: np.ndarray, y_true: np.ndarray) -> int:
-    return int(np.sum(np.logical_and(y_pred, np.logical_not(y_true))))
+    is_not_nan = ~np.isnan(y_true)
+    return int(np.sum(np.logical_and(y_pred, np.logical_not(y_true))[is_not_nan]))
 
 
 def compute_false_negatives(y_pred: np.ndarray, y_true: np.ndarray):
-    return int(np.sum(np.logical_and(np.logical_not(y_pred), y_true)))
+    is_not_nan = ~np.isnan(y_true)
+    return int(np.sum(np.logical_and(np.logical_not(y_pred), y_true)[is_not_nan]))
 
 
 def compute_precision(y_pred: np.ndarray, y_true: np.ndarray) -> float:
