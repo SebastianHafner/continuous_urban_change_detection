@@ -19,7 +19,7 @@ def has_mask(dataset: str, aoi_id: str, year: int, month: int) -> bool:
 
 def has_masked_timestamps(dataset: str, aoi_id: str) -> bool:
     masks_file = dataset_helpers.dataset_path(dataset) / aoi_id / f'masks_{aoi_id}.tif'
-    
+
 
 
 def load_mask(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
