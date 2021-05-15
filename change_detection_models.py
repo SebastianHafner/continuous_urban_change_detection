@@ -11,7 +11,7 @@ class ChangeDetectionMethod(ABC):
 
     @ abstractmethod
     # returns binary array of changes
-    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
         pass
 
 
@@ -22,7 +22,7 @@ class ChangeDatingMethod(ChangeDetectionMethod):
 
     @ abstractmethod
     # returns int array where numbers correspond to change date (index in dates list)
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+    def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
         pass
 
 
@@ -52,15 +52,16 @@ class StepFunctionModel(ChangeDatingMethod):
     def _mse(y: np.ndarray, y_hat: np.ndarray) -> float:
         return np.sum(np.square(y_hat - y), axis=-1) / y.shape[-1]
 
-    def _fit(self, dataset: str, aoi_id: str):
+    def _fit(self, dataset: str, aoi_id: str, include_masked_data: bool = False):
         # fit model to aoi id if it's not fit to it
         if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
             return
 
-        dates = dataset_helpers.get_timeseries(dataset, aoi_id)
+        dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
         self.length_ts = len(dates)
 
-        probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, self.ts_extension)
+        probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data,
+                                                                   self.ts_extension)
         data_shape = probs_cube.shape
 
         # fitting stable functions
@@ -100,26 +101,26 @@ class StepFunctionModel(ChangeDatingMethod):
         return y_pred
 
     # root mean square error of model
-    def model_error(self, dataset: str, aoi_id: str) -> np.ndarray:
+    def model_error(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
         self._fit(dataset, aoi_id)
         y_pred = self._predict(dataset, aoi_id)
-        probs = prediction_helpers.load_prediction_timeseries(dataset, aoi_id)
+        probs = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data)
         return np.sqrt(self._mse(probs, y_pred))
 
-    def model_confidence(self, dataset: str, aoi_id: str) -> np.ndarray:
-        error = self.model_error(dataset, aoi_id)
+    def model_confidence(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+        error = self.model_error(dataset, aoi_id, include_masked_data)
         confidence = np.clip(self.max_error - error, 0, self.max_error) / self.max_error
         return confidence
 
-    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
-        self._fit(dataset, aoi_id)
+    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+        self._fit(dataset, aoi_id, include_masked_data)
 
         # convert to change date product to change detection (0 and length_ts is no change)
         change = np.logical_and(self.cached_fit != 0, self.cached_fit != self.length_ts)
 
         return np.array(change).astype(np.uint8)
 
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+    def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
         self._fit(dataset, aoi_id)
         change_date = self.cached_fit.copy()
         change_date[change_date == self.length_ts] = 0

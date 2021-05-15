@@ -73,27 +73,22 @@ def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'V
 
 
 def plot_buildings(ax, aoi_id: str, year: int, month: int):
-    file = dataset_helpers.dataset_path('spacenet7') / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
-    if not file.exists():
-        return
-    img, _, _ = geofiles.read_tif(file)
-    img = img > 0
-    img = img if len(img.shape) == 2 else img[:, :, 0]
-    ax.imshow(img, cmap='gray', vmin=0, vmax=1)
+    buildings = label_helpers.load_label(aoi_id, year, month) > 0
+    ax.imshow(buildings, cmap='gray', vmin=0, vmax=1)
     ax.set_xticks([])
     ax.set_yticks([])
 
 
-def plot_change_label(ax, dataset, aoi_id: str):
-    change = label_helpers.generate_change_label(dataset, aoi_id)
+def plot_change_label(ax, dataset, aoi_id: str, include_masked_data: bool = False):
+    change = label_helpers.generate_change_label(dataset, aoi_id, include_masked_data)
     ax.imshow(change, cmap='gray', vmin=0, vmax=1)
     ax.set_xticks([])
     ax.set_yticks([])
 
 
-def plot_change_date_label(ax, aoi_id: str):
-    ts = dataset_helpers.get_timeseries('spacenet7', aoi_id)
-    change_date_label = label_helpers.generate_change_date_label(aoi_id)
+def plot_change_date_label(ax, aoi_id: str, include_masked_data: bool = False):
+    ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data)
+    change_date_label = label_helpers.generate_change_date_label(aoi_id, include_masked_data)
     cmap = DateColorMap(len(ts))
     ax.imshow(change_date_label, cmap=cmap.get_cmap(), vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
     ax.set_xticks([])

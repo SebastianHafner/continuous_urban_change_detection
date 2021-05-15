@@ -5,9 +5,10 @@ import numpy as np
 from tqdm import tqdm
 
 
-def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str, save_plot: bool = False):
+def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str,
+                        include_masked_data: bool = False, save_plot: bool = False):
 
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
     start_date = dates[0][:-1]
     end_date = dates[-1][:-1]
 
@@ -19,10 +20,10 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
     visualization.plot_optical(axs[1], dataset, aoi_id, *end_date)
     axs[1].set_title('S2 End TS')
 
-    visualization.plot_change_label(axs[2], dataset, aoi_id)
+    visualization.plot_change_label(axs[2], dataset, aoi_id, include_masked_data)
     axs[2].set_title('Change GT')
 
-    change = model.change_detection(dataset, aoi_id)
+    change = model.change_detection(dataset, aoi_id, include_masked_data)
     visualization.plot_blackwhite(axs[3], change)
     axs[3].set_title('Change Pred')
 

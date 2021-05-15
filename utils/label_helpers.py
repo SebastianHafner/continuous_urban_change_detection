@@ -1,49 +1,69 @@
 from pathlib import Path
-from utils import geofiles, visualization, dataset_helpers
+from utils import geofiles, visualization, dataset_helpers, mask_helpers
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-# TODO: use load label function
-def load_label_timeseries(aoi_id: str) -> np.ndarray:
-    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id)
-    label_cube = None
+def load_label_timeseries(aoi_id: str, include_masked_data: bool = False, ignore_bad_data: bool = False) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data, ignore_bad_data)
+    label_cube = np.zeros((*dataset_helpers.get_yx_size('spacenet7', aoi_id), len(dates)), dtype=np.uint8)
     for i, (year, month, *_) in enumerate(dates):
         label = load_label(aoi_id, year, month) > 0
-        if label_cube is None:
-            label_cube = np.zeros((*label.shape, len(dates)), dtype=np.uint8)
         label_cube[label, i] = 1
     return label_cube
 
 
-def generate_change_date_label(aoi_id: str) -> np.ndarray:
-    label_cube = load_label_timeseries(aoi_id)
-    length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id)
+def generate_change_date_label(aoi_id: str, include_masked_data: bool = False,
+                               ignore_bad_data: bool = True) -> np.ndarray:
+    label_cube = load_label_timeseries(aoi_id, include_masked_data, ignore_bad_data)
+    length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, include_masked_data, ignore_bad_data)
 
-    change_date_label = np.zeros((label_cube.shape[0], label_cube.shape[1]), dtype=np.float32)
+    change_date_label = np.zeros((dataset_helpers.get_yx_size('spacenet7', aoi_id)), dtype=np.float32)
+    # assumes that first label is not NaN
+    last_nonnan_label = label_cube[:, :, 0]
+    assert(np.sum(np.isnan(last_nonnan_label)) == 0)
     for i in range(1, length_ts):
-        change = np.logical_and(label_cube[:, :, i-1] == 0, label_cube[:, :, i] == 1)
-        change_date_label[change] = i
+        prev_label, current_label = label_cube[:, :, i-1], label_cube[:, :, i]
+
+        # TODO: check for multiple changes
+        # add immediate change (i.e., sequential labels are not NaN)
+        immediate_valid = np.logical_and(~np.isnan(prev_label), ~np.isnan(current_label))
+        immediate_change = np.logical_and(immediate_valid, np.array(prev_label != current_label))
+        change_date_label[immediate_change] = i
+
+        # check for change if previous is NaN using last nonnan label
+        far_valid = np.logical_and(np.isnan(prev_label), ~np.isnan(current_label))
+        far_change = np.logical_and(far_valid, np.array(last_nonnan_label != current_label))
+        change_date_label[far_change] = i
+
+        # change cannot be determined for this time step if current is NaN
+
+        # update last nonnan label based on where current label is not NaN
+        last_nonnan_label = np.where(~np.isnan(current_label), current_label, last_nonnan_label)
 
     return change_date_label
 
 
-def generate_change_label(dataset: str, aoi_id: str) -> np.ndarray:
+def generate_change_label(dataset: str, aoi_id: str, include_masked_data: bool = False,
+                          ignore_bad_data: bool = True) -> np.ndarray:
     # computing it for spacenet7 (change between first and last label)
     if dataset == 'spacenet7':
-        label_cube = load_label_timeseries(aoi_id)
-        length_ts = dataset_helpers.length_timeseries(dataset, aoi_id)
-        sum_arr = np.sum(label_cube, axis=-1)
-        change = np.logical_and(sum_arr != 0, sum_arr != length_ts)
+        label_start = load_label_in_timeseries(aoi_id, 0, include_masked_data, ignore_bad_data)
+        assert(np.sum(np.isnan(label_start)) == 0)
+        label_end = load_label_in_timeseries(aoi_id, -1, include_masked_data, ignore_bad_data)
+        assert (np.sum(np.isnan(label_end)) == 0)
+        change = np.array(label_start != label_end)
+
     # for oscd the change label corresponds to the normal label
     else:
-        label_file = dataset_helpers.oscd_path() / aoi_id / f'change_{aoi_id}.tif'
+        label_file = dataset_helpers.dataset_path('oscd') / aoi_id / f'change_{aoi_id}.tif'
         change, _, _ = geofiles.read_tif(label_file)
     return change.astype(np.uint8)
 
 
-def load_label_in_timeseries(aoi_id: str, index: int, ignore_bad_data: bool = True) -> np.ndarray:
-    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, ignore_bad_data)
+def load_label_in_timeseries(aoi_id: str, index: int, include_masked_data: bool = False,
+                             ignore_bad_data: bool = True) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data, ignore_bad_data)
     year, month, *_ = dates[index]
     label = load_label(aoi_id, year, month)
     return label
@@ -54,8 +74,14 @@ def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
     label = np.squeeze(label)
+    mask = mask_helpers.load_mask('spacenet7', aoi_id, year, month)
+    label[mask] = np.NaN
     return label
 
 
 if __name__ == '__main__':
+    a = np.array([True, True, False, np.NaN])
+    b = np.array([True, np.NaN, False, np.NaN])
+    print(np.logical_and(a, b))
+    print(a == True)
     pass

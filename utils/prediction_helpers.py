@@ -3,8 +3,9 @@ from utils import geofiles, visualization, dataset_helpers
 import numpy as np
 
 
-def load_prediction_timeseries(dataset: str, aoi_id: str, ts_extension: int = 0) -> np.ndarray:
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
+def load_prediction_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
+                               ts_extension: int = 0) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
 
     yx_shape = dataset_helpers.get_yx_size(dataset, aoi_id)
     n = len(dates)

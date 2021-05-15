@@ -68,6 +68,7 @@ def timestamps(dataset: str) -> dict:
     return spacenet7_timestamps() if dataset == 'spacenet7' else oscd_timestamps()
 
 
+# metadata functions
 # TODO: implement this
 def oscd_metadata() -> dict:
     pass
@@ -86,6 +87,21 @@ def metadata(dataset: str) -> dict:
     return spacenet7_metadata() if dataset == 'spacenet7' else oscd_metadata()
 
 
+def metadata_index(dataset: str, aoi_id: str, year: int, month: int) -> int:
+    md = metadata(dataset)[aoi_id]
+    for i, (y, m, *_) in enumerate(md):
+        if y == year and month == month:
+            return i
+
+
+def metadata_timestamp(dataset: str, aoi_id: str, year: int, month: int) -> int:
+    md = metadata(dataset)[aoi_id]
+    for i, ts in enumerate(md):
+        y, m, *_ = ts
+        if y == year and month == month:
+            return ts
+
+
 def config_name() -> str:
     return CONFIG_NAME
 
@@ -96,17 +112,20 @@ def date2index(date: list) -> int:
     return year * 12 + month - ref_value
 
 
-# bad data is considered masked data and corrupted satellite data
-def get_timeseries(dataset: str, aoi_id: str, ignore_bad_data: bool = True) -> list:
-    md = metadata(dataset)
-    timeseries = md['aois'][aoi_id]
+# include masked data is only
+def get_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False, ignore_bad_data: bool = True) -> list:
+    timeseries = metadata(dataset)['aois'][aoi_id]
     if ignore_bad_data:
-        timeseries = [ts for ts in timeseries if not ts[2] and (ts[3] and ts[4])]
+        if include_masked_data:
+            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in timeseries if s1 and s2]
+        else:
+            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in timeseries if not mask and (s1 and s2)]
     return timeseries
 
 
-def length_timeseries(dataset: str, aoi_id: str, ignore_bad_data: bool = True) -> int:
-    ts = get_timeseries(dataset, aoi_id, ignore_bad_data=ignore_bad_data)
+def length_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
+                      ignore_bad_data: bool = True) -> int:
+    ts = get_timeseries(dataset, aoi_id, include_masked_data, ignore_bad_data)
     return len(ts)
 
 

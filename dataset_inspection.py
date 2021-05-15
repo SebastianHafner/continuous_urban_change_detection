@@ -124,33 +124,44 @@ def visualize_timeseries_length(dataset: str):
     plt.show()
 
 
-def sanity_check_change_detection_label(dataset: str, aoi_id: str, save_plot: bool = False):
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
-    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+def sanity_check_change_detection_label(dataset: str, aoi_id: str, include_masked_data: bool = False,
+                                        include_buildings_label: bool = True, save_plot: bool = False):
+    # buildings labels only exist for spacenet7 dataset
+    include_buildings_label = include_buildings_label and dataset == 'spacenet7'
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+
+    n_plots = 5 if include_buildings_label else 3
+    fig, axs = plt.subplots(1, n_plots, figsize=(5 * n_plots, 5))
 
     # first
-    year_first, month_first = dates[0][:-1]
+    year_first, month_first, *_ = dates[0]
     visualization.plot_optical(axs[0], dataset, aoi_id, year_first, month_first)
+    if include_buildings_label:
+        visualization.plot_buildings(axs[1], aoi_id, year_first, month_first)
 
     # last
-    year_last, month_last = dates[-1][:-1]
-    visualization.plot_optical(axs[1], dataset, aoi_id, year_last, month_last)
+    year_last, month_last, *_ = dates[-1]
+    visualization.plot_optical(axs[2 if include_buildings_label else 1], dataset, aoi_id, year_last, month_last)
+    if include_buildings_label:
+        visualization.plot_buildings(axs[3], aoi_id, year_last, month_last)
 
     # change label
-    visualization.plot_change_label(axs[2], dataset, aoi_id)
+    visualization.plot_change_label(axs[4 if include_buildings_label else 2], dataset, aoi_id, include_masked_data)
 
     if not save_plot:
         plt.show()
     else:
-        output_path = dataset_helpers.root_path() / 'plots' / 'sanity_check' / 'change_label' / dataset
+        dataset_name = dataset_helpers.dataset_name(dataset)
+        output_path = dataset_helpers.root_path() / 'plots' / 'sanity_check' / 'change_label' / dataset_name
         output_path.mkdir(exist_ok=True)
         output_file = output_path / f'{aoi_id}.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
 
-def sanity_check_change_dating_label(dataset: str, aoi_id: str, save_plot: bool = False):
-    ts = dataset_helpers.get_timeseries(dataset, aoi_id)
+def sanity_check_change_dating_label(dataset: str, aoi_id: str, include_masked_data: bool = False,
+                                     save_plot: bool = False):
+    ts = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
     n = len(ts)
     n_rows, n_cols = 1, n + 1
     plot_size = 3
@@ -159,13 +170,13 @@ def sanity_check_change_dating_label(dataset: str, aoi_id: str, save_plot: bool 
 
     fig, axs = plt.subplots(n_rows, n_cols, figsize=(n_cols * plot_size, n_rows * plot_size))
 
-    for i, (year, month, _) in enumerate(tqdm(ts)):
+    for i, (year, month, *_) in enumerate(tqdm(ts)):
         visualization.plot_optical(axs[i], dataset, aoi_id, year, month)
         title = f'{year}-{month:02d}'
         color = cmap(i)
         axs[i].set_title(title, c=color, fontsize=16, fontweight='bold')
 
-    visualization.plot_change_date_label(axs[-1], aoi_id)
+    visualization.plot_change_date_label(axs[-1], aoi_id, include_masked_data)
 
     if not save_plot:
         plt.show()
@@ -179,13 +190,14 @@ def sanity_check_change_dating_label(dataset: str, aoi_id: str, save_plot: bool 
 
 if __name__ == '__main__':
     ds = 'spacenet7'
-    for aoi_id in dataset_helpers.get_all_ids(ds):
+    for aoi_id in dataset_helpers.get_aoi_ids(ds):
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
         # visualize_all_data(ds, aoi_id, config_name=cfg, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
-        # sanity_check_change_detection_label(ds, aoi_id, save_plot=False)
-        # sanity_check_change_dating_label(aoi_id, save_plot=True)
+        # sanity_check_change_detection_label(ds, aoi_id, include_masked_data=True, save_plot=False)
+        sanity_check_change_dating_label(ds, aoi_id, include_masked_data=True, save_plot=True)
         pass
 
-    visualize_timeseries_length(ds)
-    # sanity_check_change_detection_label(ds, 'L15-0358E-1220N_1433_3310_13', save_plot=True)
+    # sanity_check_change_detection_label(ds, 'L15-0331E-1257N_1327_3160_13', include_masked_data=False, save_plot=False)
+    sanity_check_change_dating_label(ds, 'L15-1479E-1101N_5916_3785_13', include_masked_data=True, save_plot=False)
+    # visualize_timeseries_length(ds)

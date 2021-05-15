@@ -199,8 +199,8 @@ def produce_oscd_change_labels(path_oscd_dataset: Path, path_oscd_multitemporal_
 
 
 if __name__ == '__main__':
-    # generate_spacenet7_metadata_file()
-    assemble_spacenet7_masks()
+    generate_spacenet7_metadata_file()
+    # assemble_spacenet7_masks()
     # assemble_buildings('train')
     # generate_spacenet7_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
     # generate_oscd_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'oscd_multitemporal_dataset')
