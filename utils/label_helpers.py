@@ -38,7 +38,7 @@ def generate_change_label(dataset: str, aoi_id: str, include_masked_data: bool =
         change = np.array(label_start != label_end)
     # for oscd the change label corresponds to the normal label
     else:
-        label_file = dataset_helpers.dataset_path('oscd') / aoi_id / f'change_{aoi_id}.tif'
+        label_file = dataset_helpers.dataset_path('oscd') / aoi_id / 'change' / f'change_{aoi_id}.tif'
         change, _, _ = geofiles.read_tif(label_file)
     return change.astype(np.uint8)
 

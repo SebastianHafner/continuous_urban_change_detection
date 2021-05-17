@@ -37,11 +37,12 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
     plt.close(fig)
 
 
-def quantitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str):
+def quantitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str,
+                         include_masked_data: bool = False):
 
     # TODO: different quantitative testing for oscd dataset (not penalizing omissions)
-    pred = model.change_detection(dataset, aoi_id)
-    gt = label_helpers.generate_change_label(dataset, aoi_id)
+    pred = model.change_detection(dataset, aoi_id, include_masked_data)
+    gt = label_helpers.generate_change_label(dataset, aoi_id, include_masked_data)
 
     precision = metrics.compute_precision(pred, gt)
     recall = metrics.compute_recall(pred, gt)
@@ -51,12 +52,13 @@ def quantitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, a
     print(f'F1: {f1:.3f} - P: {precision:.3f} - R: {recall:.3f}')
 
 
-def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod, dataset: str):
+def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod, dataset: str,
+                                 include_masked_data: bool = False):
     preds, gts = [], []
-    for aoi_id in tqdm(dataset_helpers.get_all_ids(dataset)):
-        pred = model.change_detection(dataset, aoi_id)
+    for aoi_id in tqdm(dataset_helpers.get_aoi_ids(dataset)):
+        pred = model.change_detection(dataset, aoi_id, include_masked_data)
         preds.append(pred.flatten())
-        gt = label_helpers.generate_change_label(dataset, aoi_id)
+        gt = label_helpers.generate_change_label(dataset, aoi_id, include_masked_data)
         gts.append(gt.flatten())
         assert(pred.size == gt.size)
 
@@ -80,7 +82,8 @@ if __name__ == '__main__':
 
     model = stepfunction
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        qualitative_testing(model, ds, aoi_id, save_plot=False)
+        # qualitative_testing(model, ds, aoi_id, save_plot=False)
         # quantitative_testing(model, ds, aoi_id)
-    # quantitative_testing_dataset(model, ds)
+        pass
+    quantitative_testing_dataset(model, ds, include_masked_data=True)
 

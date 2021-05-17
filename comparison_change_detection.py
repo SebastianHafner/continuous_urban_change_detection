@@ -4,40 +4,49 @@ from utils import geofiles, dataset_helpers, label_helpers, prediction_helpers, 
 import change_detection_models as cd_models
 
 
-def qualitative_comparison_change_detection(models: list, dataset: str, aoi_id: str, names: list = None):
+def qualitative_comparison_change_detection(models: list, dataset: str, aoi_id: str,
+                                            include_masked_data: True, names: list = None, save_plot: bool = False):
 
-    dates = dataset_helpers.get_timeseries(ds, aoi_id)
+    fontsize = 16
+    dates = dataset_helpers.get_timeseries(ds, aoi_id, include_masked_data)
 
     n_models = len(models)
     fig, axs = plt.subplots(1, 3 + n_models, figsize=((3 + n_models) * 5, 5))
 
     # pre image, post image and gt
-    visualization.plot_optical(axs[0], dataset, aoi_id, *dates[0][:-1])
-    axs[0].set_title('S2 Start TS')
-    visualization.plot_optical(axs[1], dataset, aoi_id, *dates[-1][:-1])
-    axs[1].set_title('S2 End TS')
-    visualization.plot_change_label(axs[2], dataset, aoi_id)
-    axs[2].set_title('Change GT')
+    visualization.plot_optical(axs[0], dataset, aoi_id, *dates[0][:2])
+    axs[0].set_title('S2 Start TS', fontsize=fontsize)
+    visualization.plot_optical(axs[1], dataset, aoi_id, *dates[-1][:2])
+    axs[1].set_title('S2 End TS', fontsize=fontsize)
+    visualization.plot_change_label(axs[2], dataset, aoi_id, include_masked_data)
+    axs[2].set_title('Change GT', fontsize=fontsize)
 
     for i, model in enumerate(models):
-        change = model.change_detection(dataset, aoi_id)
+        change = model.change_detection(dataset, aoi_id, include_masked_data)
         visualization.plot_blackwhite(axs[3 + i], change)
         title = names[i] if names is not None else model.name
-        axs[3 + i].set_title(title)
+        axs[3 + i].set_title(title, fontsize=fontsize)
 
-    plt.show()
+
+    if not save_plot:
+        plt.show()
+    else:
+        save_path = dataset_helpers.root_path() / 'plots' / 'comparison_detection' / dataset_helpers.dataset_name(dataset)
+        save_path.mkdir(exist_ok=True)
+        output_file = save_path / f'{aoi_id}_detection.png'
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close(fig)
 
 
 if __name__ == '__main__':
 
-    cfg = 'fusionda_cons05_jaccardmorelikeloss'
-    ds = 'spacenet7_s1s2_dataset'
+    ds = 'oscd'
+    pcc = cd_models.PostClassificationComparison()
+    # sf2 = cd_models.StepFunctionModel(n_stable=2)
+    sf6 = cd_models.StepFunctionModel(n_stable=6)
 
-    dcva = cd_models.SimplifiedDeepChangeVectorAnalysis(cfg)
-    pcc = cd_models.PostClassificationComparison(cfg)
-    stepfunction = cd_models.StepFunctionModel(cfg, n_stable=6)
+    models = [pcc, sf6]
+    names = ['PCC', 'SF_6']
 
-    model_comparison = [pcc, stepfunction]
-
-    for aoi_id in dataset_helpers.get_all_ids(ds):
-        qualitative_comparison_change_detection(model_comparison, ds, aoi_id)
+    for aoi_id in dataset_helpers.get_aoi_ids(ds):
+        qualitative_comparison_change_detection(models, ds, aoi_id, include_masked_data=True, names=names, save_plot=True)

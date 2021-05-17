@@ -1,24 +1,25 @@
 from pathlib import Path
 from utils import geofiles
-import numpy as np
 import preprocess_spacenet7
 import preprocess_oscd
+import yaml
 
-# GLOBAL VARIABLES
-ROOT_PATH = '/storage/shafner/continuous_urban_change_detection'
-SPACENET7_PATH = '/storage/shafner/spacenet7'  # this is the origin SpaceNet7 dataset
-SPACENET7_DATASET_NAME = 'spacenet7_s1s2_dataset_v2'
-OSCD_DATASET_NAME = 'oscd_s1s2_dataset'
-CONFIG_NAME = 'fusionda_cons05_jaccardmorelikeloss'
+
+def settings() -> dict:
+    with open('settings.yaml') as file:
+        s = yaml.load(file, Loader=yaml.FullLoader)
+    return s
 
 
 # dataset names
 def spacenet7_dataset_name() -> str:
-    return SPACENET7_DATASET_NAME
+    s = settings()
+    return Path(s['DATASET_NAMES']['SPACENET7'])
 
 
 def oscd_dataset_name() -> str:
-    return OSCD_DATASET_NAME
+    s = settings()
+    return Path(s['DATASET_NAMES']['OSCD'])
 
 
 def dataset_name(dataset: str) -> str:
@@ -27,7 +28,8 @@ def dataset_name(dataset: str) -> str:
 
 # dataset paths
 def root_path() -> Path:
-    return Path(ROOT_PATH)
+    s = settings()
+    return Path(s['PATHS']['ROOT_PATH'])
 
 
 def dataset_path(dataset: str) -> Path:
@@ -36,7 +38,13 @@ def dataset_path(dataset: str) -> Path:
 
 # path to origin SpaceNet7 dataset
 def spacenet7_path() -> Path:
-    return Path(SPACENET7_PATH)
+    s = settings()
+    return Path(s['PATHS']['SPACENET7'])
+
+
+def oscd_path() -> Path:
+    s = settings()
+    return Path(s['PATHS']['OSCD'])
 
 
 def bad_data(dataset: str) -> dict:
@@ -74,9 +82,13 @@ def timestamps(dataset: str) -> dict:
 
 
 # metadata functions
-# TODO: implement this
 def oscd_metadata() -> dict:
-    pass
+    metadata_file = dataset_path('oscd') / 'metadata.json'
+    if not metadata_file.exists():
+        preprocess_oscd.generate_oscd_metadata_file()
+    assert (metadata_file.exists())
+    metadata = geofiles.load_json(metadata_file)
+    return metadata
 
 
 def spacenet7_metadata() -> dict:
@@ -108,7 +120,8 @@ def metadata_timestamp(dataset: str, aoi_id: str, year: int, month: int) -> int:
 
 
 def config_name() -> str:
-    return CONFIG_NAME
+    s = settings()
+    return s['CONFIG_NAME']
 
 
 def date2index(date: list) -> int:

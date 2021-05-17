@@ -186,12 +186,12 @@ class PostClassificationComparison(ChangeDetectionMethod):
         self.threshold = threshold
         self.ignore_negative_changes = ignore_negative_changes
 
-    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
-        dates = dataset_helpers.get_timeseries(dataset, aoi_id)
-        start_date = dates[0][:-1]
-        end_date = dates[-1][:-1]
-        probs_start = prediction_helpers.load_prediction(dataset, aoi_id, *start_date)
-        probs_end = prediction_helpers.load_prediction(dataset, aoi_id, *end_date)
+    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+        dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+        start_year, start_month, *_ = dates[0]
+        end_year, end_month, *_ = dates[-1]
+        probs_start = prediction_helpers.load_prediction(dataset, aoi_id, start_year, start_month)
+        probs_end = prediction_helpers.load_prediction(dataset, aoi_id, end_year, end_month)
         class_start = probs_start > self.threshold
         class_end = probs_end > self.threshold
         if self.ignore_negative_changes:

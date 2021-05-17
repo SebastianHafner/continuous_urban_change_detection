@@ -3,32 +3,6 @@ import numpy as np
 from pathlib import Path
 
 
-def generate_oscd_dataset_file(path_to_oscd_multitemporal_dataset: Path):
-    root_path = path_to_oscd_multitemporal_dataset
-    aoi_ids = [f.stem for f in root_path.iterdir() if f.is_dir()]
-
-    data = {
-        's1_bands': ['VV', 'VH'],
-        's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
-        'sites': {}
-    }
-
-    def filename2date(filename: Path) -> tuple:
-        parts = filename.stem.split('_')
-        return int(parts[-2]), int(parts[-1]), False
-
-    for index, aoi_id in enumerate(aoi_ids):
-
-        path_files = root_path / aoi_id / 'sentinel2'
-        dates = [filename2date(f) for f in path_files.glob('**/*') if f.is_file()]
-        dates = sorted(dates, key=lambda x: x[0] * 12 + x[1])
-
-        data['sites'][aoi_id] = dates
-
-    output_file = root_path / f'metadata.json'
-    geofiles.write_json(output_file, data)
-
-
 def produce_oscd_change_labels(path_oscd_dataset: Path, path_oscd_multitemporal_dataset: Path):
     root_path = path_oscd_multitemporal_dataset
     aoi_ids = [f.stem for f in root_path.iterdir() if f.is_dir()]
@@ -48,6 +22,23 @@ def produce_oscd_change_labels(path_oscd_dataset: Path, path_oscd_multitemporal_
         to_file = path_oscd_multitemporal_dataset / aoi_id / f'change_{aoi_id}.tif'
         geofiles.write_tif(to_file, change.astype(np.uint8), geotransform, crs)
     pass
+
+
+def prepare_oscd_change_labels():
+    # getting all aoi ids
+    oscd_labels_path = dataset_helpers.oscd_path() / 'labels'
+    aoi_ids = [d.stem for d in oscd_labels_path.iterdir() if d.is_dir()]
+    for aoi_id in aoi_ids:
+        cm_file = dataset_helpers.oscd_path() / 'labels' / aoi_id / 'cm' / f'{aoi_id}-cm.tif'
+        # no geographical information
+        cm, _, _ = geofiles.read_tif(cm_file)
+        cm = cm - 1
+        s2_folder = dataset_helpers.oscd_path() / 'images' / aoi_id / 'imgs_1'
+        s2_file = [f for f in s2_folder.glob('**/*') if f.is_file() and f.stem.split('_')[-1] == 'B02'][0]
+        _, geotransform, crs = geofiles.read_tif(s2_file)
+
+        output_file = dataset_helpers.oscd_path() / 'labels_gee' / f'change_{aoi_id}.tif'
+        geofiles.write_tif(output_file, cm, geotransform, crs)
 
 
 def get_date(file: Path) -> tuple:
@@ -82,26 +73,34 @@ def assemble_oscd_timestamps():
     geofiles.write_json(output_file, data)
 
 
-def generate_spacenet7_metadata_file():
-    timestamps = dataset_helpers.spacenet7_timestamps()
-    bad_data = dataset_helpers.bad_data('spacenet7')
-    missing_aois = dataset_helpers.missing_aois()
+def generate_oscd_metadata_file():
+    timestamps = dataset_helpers.oscd_timestamps()
+    bad_data = dataset_helpers.bad_data('ocsd')
 
     data = {
         's1_bands': ['VV', 'VH'],
         's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
+        'yx_sizes': {},
+        'split': {'train': [], 'test': []},
         'aois': {}
     }
 
-    for aoi_id in timestamps.keys():
+    # add training and test sites to metadata
+    train_file = dataset_helpers.oscd_path() / 'images' / 'train.txt'
+    with open(str(train_file)) as f:
+        content = f.read()[:-1].split(',')
+        data['split']['train'] = content
+    test_file = dataset_helpers.oscd_path() / 'images' / 'test.txt'
+    with open(str(test_file)) as f:
+        content = f.read()[:-1].split(',')
+        data['split']['test'] = content
 
-        # skip aoi if it's missing
-        if aoi_id in missing_aois:
-            continue
+    for aoi_id in timestamps.keys():
 
         # put together metadata for aoi_id
         aoi_data = []
         aoi_timestamps = timestamps[aoi_id]
+        yx_size_set = False
         for i, timestamp in enumerate(aoi_timestamps):
             year, month, mask = timestamp
 
@@ -110,11 +109,21 @@ def generate_spacenet7_metadata_file():
             s2 = False if i in bad_data[aoi_id]['S2'] else True
             timestamp_data = [year, month, mask, s1, s2]
             aoi_data.append(timestamp_data)
+
+            if not yx_size_set and s1:
+                s1_path = dataset_helpers.dataset_path('oscd') / aoi_id / 'sentinel1'
+                s1_file = s1_path / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+                arr, _, _ = geofiles.read_tif(s1_file)
+                data['yx_sizes'][aoi_id] = (arr.shape[0], arr.shape[1])
+                yx_size_set = True
+
         data['aois'][aoi_id] = aoi_data
 
-    output_file = dataset_helpers.dataset_path('spacenet7') / f'metadata.json'
+    output_file = dataset_helpers.dataset_path('oscd') / f'metadata.json'
     geofiles.write_json(output_file, data)
 
 
 if __name__ == '__main__':
-    assemble_oscd_timestamps()
+    # assemble_oscd_timestamps()
+    generate_oscd_metadata_file()
+    # prepare_oscd_change_labels()

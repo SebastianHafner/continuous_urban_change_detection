@@ -1,5 +1,5 @@
 from pathlib import Path
-from utils import geofiles, visualization, dataset_helpers
+from utils import geofiles, dataset_helpers, label_helpers
 import numpy as np
 
 
@@ -61,5 +61,17 @@ def load_features(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarra
     return features
 
 
+def compute_omissions(dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+    pred_cube = load_prediction_timeseries(dataset, aoi_id, include_masked_data)
+    pred_cube = pred_cube > 0.5
+    detected = np.any(pred_cube, axis=-1)
+    label_end = label_helpers.load_label_in_timeseries(aoi_id, -1, include_masked_data)
+    omissions = np.logical_and(~detected, label_end)
+    return omissions
+
+
 if __name__ == '__main__':
-    predictions = load_prediction_timeseries('spacenet7', 'L15-0331E-1257N_1327_3160_13')
+    # predictions = load_prediction_timeseries('spacenet7', 'L15-0331E-1257N_1327_3160_13')
+    a = np.array([False, np.NaN])
+    a = np.ma.array(a, mask=np.isnan(a))
+    print(np.any(a))

@@ -120,6 +120,7 @@ def generate_spacenet7_metadata_file():
     data = {
         's1_bands': ['VV', 'VH'],
         's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
+        'yx_sizes': {},
         'aois': {}
     }
 
@@ -132,6 +133,7 @@ def generate_spacenet7_metadata_file():
         # put together metadata for aoi_id
         aoi_data = []
         aoi_timestamps = timestamps[aoi_id]
+        yx_size_set = False
         for i, timestamp in enumerate(aoi_timestamps):
             year, month, mask = timestamp
 
@@ -140,6 +142,14 @@ def generate_spacenet7_metadata_file():
             s2 = False if i in bad_data[aoi_id]['S2'] else True
             timestamp_data = [year, month, mask, s1, s2]
             aoi_data.append(timestamp_data)
+
+            if not yx_size_set and s1:
+                s1_path = dataset_helpers.dataset_path('spacenet7') / aoi_id / 'sentinel1'
+                s1_file = s1_path / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+                arr, _, _ = geofiles.read_tif(s1_file)
+                data['yx_sizes'][aoi_id] = (arr.shape[0], arr.shape[1])
+                yx_size_set = True
+
         data['aois'][aoi_id] = aoi_data
 
     output_file = dataset_helpers.dataset_path('spacenet7') / f'metadata.json'

@@ -138,10 +138,10 @@ def sanity_check_mask_numbers(dataset: str, aoi_id: str):
 
 
 if __name__ == '__main__':
-    ds = 'spacenet7'
+    ds = 'oscd'
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        # sanity_check_change_detection_label(ds, aoi_id, include_masked_data=True, save_plot=True)
-        sanity_check_change_dating_label(ds, aoi_id, include_masked_data=True, save_plot=True)
+        sanity_check_change_detection_label(ds, aoi_id, include_masked_data=True, save_plot=True)
+        # sanity_check_change_dating_label(ds, aoi_id, include_masked_data=True, save_plot=True)
         # sanity_check_masks(ds, aoi_id, save_plot=True)
         # sanity_check_mask_numbers(ds, aoi_id)
         pass

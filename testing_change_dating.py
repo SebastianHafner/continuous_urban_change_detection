@@ -5,23 +5,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, save_plot: bool = False):
+def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, include_masked_data: bool = False,
+                        save_plot: bool = False):
 
-    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id)
-    pred_change_date = model.change_dating('spacenet7', aoi_id)
+    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data)
+    pred_change_date = model.change_dating('spacenet7', aoi_id, include_masked_data)
 
     fig = plt.figure(figsize=(25, 7))
     ph = 20  # plot height
     grid = plt.GridSpec(ph+1, 4, wspace=0.1, hspace=0.1)
     ax_t1 = fig.add_subplot(grid[:ph, 0])
-    visualization.plot_optical(ax_t1, 'spacenet7', aoi_id, *dates[0][:-1])
+    visualization.plot_optical(ax_t1, 'spacenet7', aoi_id, dates[0][0], dates[0][1])
     ax_t1.set_title('S2 Start TS', fontsize=20)
     ax_t2 = fig.add_subplot(grid[:ph, 1])
-    visualization.plot_optical(ax_t2, 'spacenet7', aoi_id, *dates[-1][:-1])
+    visualization.plot_optical(ax_t2, 'spacenet7', aoi_id, dates[-1][0], dates[-1][1])
     ax_t2.set_title('S2 End TS', fontsize=20)
 
     ax_gt = fig.add_subplot(grid[:ph, 2])
-    visualization.plot_change_date_label(ax_gt, aoi_id)
+    visualization.plot_change_date_label(ax_gt, aoi_id, include_masked_data)
     ax_gt.set_title(f'Change Timestamp GT', fontsize=20)
 
     ax_pred = fig.add_subplot(grid[:ph, 3])
@@ -79,6 +80,6 @@ if __name__ == '__main__':
     aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for i, aoi_id in enumerate(aoi_ids):
         print(i)
-        qualitative_testing(model, aoi_id, save_plot=False)
+        qualitative_testing(model, aoi_id, save_plot=True)
         # quantitative_testing(model, aoi_id)
     # quantitative_testing_dataset(model)

@@ -85,7 +85,7 @@ def visualize_all_data(dataset: str, aoi_id: str, include_f1_score: bool = False
 
 def visualize_timeseries_length(dataset: str):
     data, labels = [], []
-    aoi_ids = dataset_helpers.get_all_ids(dataset)
+    aoi_ids = dataset_helpers.get_aoi_ids(dataset)
     for aoi_id in tqdm(aoi_ids):
         if aoi_id in dataset_helpers.missing_aois():
             continue
@@ -125,11 +125,11 @@ def visualize_timeseries_length(dataset: str):
 
 
 if __name__ == '__main__':
-    ds = 'oscd'
+    ds = 'spacenet7'
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        visualize_satellite_data(ds, aoi_id, save_plot=True)
+        # visualize_satellite_data(ds, aoi_id, save_plot=True)
         # visualize_all_data(ds, aoi_id, config_name=cfg, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         pass
 
-    # visualize_timeseries_length(ds)
+    visualize_timeseries_length(ds)

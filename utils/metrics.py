@@ -29,13 +29,13 @@ def compute_false_negatives(y_pred: np.ndarray, y_true: np.ndarray):
 def compute_precision(y_pred: np.ndarray, y_true: np.ndarray) -> float:
     tp = compute_true_positives(y_pred, y_true)
     fp = compute_false_positives(y_pred, y_true)
-    return float(tp / (tp + fp))
+    return 0 if tp + fp == 0 else float(tp / (tp + fp))
 
 
 def compute_recall(y_pred: np.ndarray, y_true: np.ndarray) -> float:
     tp = compute_true_positives(y_pred, y_true)
     fn = compute_false_negatives(y_pred, y_true)
-    return float(tp / (tp + fn))
+    return 0 if tp + fn == 0 else float(tp / (tp + fn))
 
 
 def compute_mean_date_error(y_pred: np.ndarray, y_true: np.ndarray) -> float:
