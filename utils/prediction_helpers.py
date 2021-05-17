@@ -38,7 +38,7 @@ def load_prediction(dataset: str, aoi_id: str, year: int, month: int):
     return pred
 
 
-def load_prediction_in_timeseries(dataset: str, aoi_id: str, index: int, include_masked_data: bool = False,
+def load_prediction_in_timeseries(dataset: str, aoi_id: str, index: int, include_masked_data: bool,
                                   ignore_bad_data: bool = True) -> np.ndarray:
     dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data, ignore_bad_data)
     year, month, *_ = dates[index]
@@ -46,18 +46,17 @@ def load_prediction_in_timeseries(dataset: str, aoi_id: str, index: int, include
     return pred
 
 
-def load_features_in_timeseries(dataset: str, aoi_id: str, index: int) -> np.ndarray:
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
-    year, month, _ = dates[index]
+def load_features_in_timeseries(dataset: str, aoi_id: str, index: int, include_masked_data: bool) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+    year, month, *_ = dates[index]
     features = load_features(dataset, aoi_id, year, month)
     return features
 
 
 def load_features(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
     predictions_path = dataset_helpers.dataset_path(dataset) / aoi_id / dataset_helpers.config_name()
-    pred_file = predictions_path / f'features_{aoi_id}_{year}_{month:02d}.tif'
-    features, _, _ = geofiles.read_tif(pred_file)
-    features = np.squeeze(features)
+    file = predictions_path / f'features_{aoi_id}_{year}_{month:02d}.npy'
+    features = np.load(str(file))
     return features
 
 
