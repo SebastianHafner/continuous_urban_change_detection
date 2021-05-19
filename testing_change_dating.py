@@ -5,11 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, include_masked_data: bool = False,
-                        save_plot: bool = False):
+def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, save_plot: bool = False):
 
-    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data)
-    pred_change_date = model.change_dating('spacenet7', aoi_id, include_masked_data)
+    dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+    pred_change_date = model.change_dating('spacenet7', aoi_id, dataset_helpers.include_masked())
 
     fig = plt.figure(figsize=(25, 7))
     ph = 20  # plot height
@@ -22,7 +21,7 @@ def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, includ
     ax_t2.set_title('S2 End TS', fontsize=20)
 
     ax_gt = fig.add_subplot(grid[:ph, 2])
-    visualization.plot_change_date_label(ax_gt, aoi_id, include_masked_data)
+    visualization.plot_change_date_label(ax_gt, aoi_id, dataset_helpers.include_masked())
     ax_gt.set_title(f'Change Timestamp GT', fontsize=20)
 
     ax_pred = fig.add_subplot(grid[:ph, 3])
@@ -42,6 +41,7 @@ def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, includ
     plt.close(fig)
 
 
+# TODO: this one does not work for include masked
 def quantitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str):
     label_change_date = label_helpers.generate_change_date_label(aoi_id)
     pred_change_date = model.change_dating('spacenet7', aoi_id)
@@ -54,6 +54,7 @@ def quantitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str):
     print(f'{aoi_id} RMSE: {rmse:.3f}')
 
 
+# TODO: this one does not work for incldue masked
 def quantitative_testing_dataset(model: cd_models.ChangeDatingMethod):
     all_sdiff = []
     n_total = 0
@@ -75,11 +76,13 @@ def quantitative_testing_dataset(model: cd_models.ChangeDatingMethod):
 
 if __name__ == '__main__':
 
-    model = cd_models.StepFunctionModel(n_stable=6)
+    sf = cd_models.StepFunctionModel(n_stable=6)
+    bpd = cd_models.BreakPointDetection(max_error=3, min_segment_length=1)
 
+    model = bpd
     aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for i, aoi_id in enumerate(aoi_ids):
         print(i)
-        qualitative_testing(model, aoi_id, save_plot=True)
+        qualitative_testing(model, aoi_id, save_plot=False)
         # quantitative_testing(model, aoi_id)
     # quantitative_testing_dataset(model)

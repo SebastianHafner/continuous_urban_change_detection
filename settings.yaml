@@ -10,3 +10,7 @@ DATASET_NAMES:
 CONFIG_NAME: 'fusionda_cons05_jaccardmorelikeloss'
 
 INCLUDE_MASKED_DATA: True
+
+PLOTTING:
+  FONTSIZE: 16
+  PLOTSIZE: 3

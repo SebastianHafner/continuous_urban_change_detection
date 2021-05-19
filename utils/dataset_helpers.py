@@ -104,6 +104,11 @@ def metadata(dataset: str) -> dict:
     return spacenet7_metadata() if dataset == 'spacenet7' else oscd_metadata()
 
 
+def aoi_metadata(dataset: str, aoi_id: str) -> list:
+    md = metadata(dataset)
+    return md['aois'][aoi_id]
+
+
 def metadata_index(dataset: str, aoi_id: str, year: int, month: int) -> int:
     md = metadata(dataset)[aoi_id]
     for i, (y, m, *_) in enumerate(md):
@@ -132,16 +137,18 @@ def date2index(date: list) -> int:
 
 # include masked data is only
 def get_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False, ignore_bad_data: bool = True) -> list:
-    timeseries = metadata(dataset)['aois'][aoi_id]
+    aoi_md = aoi_metadata(dataset, aoi_id)
     if ignore_bad_data:
         if include_masked_data:
-            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in timeseries if s1 and s2]
+            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1 and s2]
             # trim time series at beginning and end such that it starts and ends with an unmasked timestamp
-            unmasked_indices = [i for i, (_, _, mask, *_) in enumerate(timeseries) if not mask]
+            unmasked_indices = [i for i, (_, _, mask, *_) in enumerate(aoi_md) if not mask]
             min_unmasked, max_unmasked = min(unmasked_indices), max(unmasked_indices)
             timeseries = timeseries[min_unmasked:max_unmasked + 1]
         else:
-            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in timeseries if not mask and (s1 and s2)]
+            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if not mask and (s1 and s2)]
+    else:
+        timeseries = aoi_md
     return timeseries
 
 
@@ -160,21 +167,21 @@ def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
     return sorted(aoi_ids)
 
 
-# TODO: make this alos work for OSCD dataset
+def include_masked() -> bool:
+    s = settings()
+    return s['INCLUDE_MASKED_DATA']
+
+
 def get_geo(dataset: str, aoi_id: str) -> tuple:
-    dates = get_timeseries(dataset, aoi_id, ignore_bad_data=False)
-    year, month = dates[0]
-    buildings_file = dataset_path(dataset) / aoi_id / 'buildings' / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
-    _, transform, crs = geofiles.read_tif(buildings_file)
+    folder = dataset_path(dataset) / aoi_id / 'sentinel1'
+    file = [f for f in folder.glob('**/*') if f.is_file()][0]
+    _, transform, crs = geofiles.read_tif(file)
     return transform, crs
 
 
-# TODO: would make sense to cache xy size
 def get_yx_size(dataset: str, aoi_id: str) -> tuple:
-    folder = dataset_path(dataset) / aoi_id / 'sentinel1'
-    file = [f for f in folder.glob('**/*') if f.is_file()][0]
-    arr, transform, crs = geofiles.read_tif(file)
-    return arr.shape[0], arr.shape[1]
+    md = metadata(dataset)
+    return md['yx_sizes'][aoi_id]
 
 
 def date2str(date: list):

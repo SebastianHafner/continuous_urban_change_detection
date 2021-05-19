@@ -12,7 +12,7 @@ def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
     return label
 
 
-def load_label_in_timeseries(aoi_id: str, index: int, include_masked_data: bool = False,
+def load_label_in_timeseries(aoi_id: str, index: int, include_masked_data: bool,
                              ignore_bad_data: bool = True) -> np.ndarray:
     dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data, ignore_bad_data)
     year, month, *_ = dates[index]
@@ -75,10 +75,6 @@ def generate_change_date_label(aoi_id: str, include_masked_data: bool = False,
         last_nonnan_label = np.where(~np.isnan(current_label), current_label, last_nonnan_label)
 
     return change_date_label
-
-
-
-
 
 
 if __name__ == '__main__':

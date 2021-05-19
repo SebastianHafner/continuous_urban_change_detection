@@ -104,9 +104,56 @@ def show_f1_evaluation(include_masked_data: bool = False):
     plt.show()
 
 
+def test_last_prediction_improvement():
+
+    preds_ref, preds_exp, preds_mean, labels = [], [], [], []
+
+    for aoi_id in tqdm(dataset_helpers.get_aoi_ids('spacenet7')):
+
+        n = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        pred_cube = prediction_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+
+        def exponential_distribution(x: np.ndarray, la: float = 0.25) -> np.ndarray:
+            return la * np.e ** (-la * x)
+        coefficients = exponential_distribution(np.arange(n))[::-1]
+
+        pred_cube = pred_cube.transpose((2, 0, 1))
+
+        pred_mean = np.mean(pred_cube, axis=0)
+        pred_mean = pred_mean > 0.5
+        preds_mean.append(pred_mean.flatten())
+
+        pred_cube = coefficients[:, np.newaxis, np.newaxis] * pred_cube
+        pred_exp = np.sum(pred_cube, axis=0)
+        pred_exp = pred_exp > 0.5
+        preds_exp.append(pred_exp.flatten())
+
+        pred_ref = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
+                                                                    dataset_helpers.include_masked())
+        pred_ref = pred_ref > 0.5
+        preds_ref.append(pred_ref.flatten())
+
+        label = label_helpers.load_label_in_timeseries(aoi_id, -1, dataset_helpers.include_masked())
+        labels.append(label.flatten())
+
+    preds_exp, preds_ref, preds_mean = np.concatenate(preds_exp), np.concatenate(preds_ref), np.concatenate(preds_mean)
+    labels = np.concatenate(labels)
+
+    f1_mean = metrics.compute_f1_score(preds_mean, labels)
+    f1_exp = metrics.compute_f1_score(preds_exp, labels)
+    f1_ref = metrics.compute_f1_score(preds_ref, labels)
+
+    print(f'{f1_ref:.3f} (ref) - {f1_mean:.3f} (mean) - {f1_exp:.3f} (exp)')
+
+
 if __name__ == '__main__':
     for aoi_id in dataset_helpers.get_aoi_ids('spacenet7'):
         # run_urban_extractor_evaluation(config_name, aoi_id)
+
         pass
 
-    show_f1_evaluation(include_masked_data=True)
+    # show_f1_evaluation(include_masked_data=True)
+
+    test_last_prediction_improvement()
+
+

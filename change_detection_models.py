@@ -25,6 +25,10 @@ class ChangeDatingMethod(ChangeDetectionMethod):
     def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
         pass
 
+    @staticmethod
+    def _mse(y: np.ndarray, y_hat: np.ndarray) -> float:
+        return np.sum(np.square(y_hat - y), axis=-1) / y.shape[-1]
+
 
 class StepFunctionModel(ChangeDatingMethod):
 
@@ -48,9 +52,6 @@ class StepFunctionModel(ChangeDatingMethod):
     def _change_function(x: np.ndarray, x0: float):
         return np.piecewise(x, [x < x0, x >= x0], [0., 1.])
 
-    @staticmethod
-    def _mse(y: np.ndarray, y_hat: np.ndarray) -> float:
-        return np.sum(np.square(y_hat - y), axis=-1) / y.shape[-1]
 
     def _fit(self, dataset: str, aoi_id: str, include_masked_data: bool = False):
         # fit model to aoi id if it's not fit to it
@@ -161,10 +162,10 @@ class DeepChangeVectorAnalysis(ChangeDetectionMethod):
             raise Exception('Unknown thresholding method')
         return binary.astype(np.uint8)
 
-    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
 
-        features_start = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, 0)
-        features_end = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, -1)
+        features_start = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, 0, include_masked_data)
+        features_end = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, -1, include_masked_data)
 
         if self.subset_features:
             features_selection = self._get_feature_selection(features_start, features_end)
@@ -220,6 +221,88 @@ class Thresholding(ChangeDetectionMethod):
         change = np.array(difference > thresh)
 
         return np.array(change).astype(np.uint8)
+
+
+class BreakPointDetection(ChangeDatingMethod):
+
+    def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.1, min_segment_length: int = 3):
+        super().__init__('breakpointdetection')
+        self.fitted_dataset = None
+        self.fitted_aoi = None
+        # index when changed occurred in the time series
+        # (no change is index 0 and length_ts for non-urban and urban, respectively)
+        self.cached_fit = None
+        self.length_ts = None
+
+        self.error_multiplier = error_multiplier
+        self.min_prob_diff = min_prob_diff
+        self.min_segment_length = min_segment_length
+
+    def _fit(self, dataset: str, aoi_id: str, include_masked_data: bool):
+        if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
+            return
+
+        timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+        self.length_ts = len(timeseries)
+
+        probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data)
+
+        errors = []
+        mean_diffs = []
+
+        # compute mse for stable fit
+        mean_prob = np.mean(probs_cube, axis=-1)
+        pred_prob_stable = np.repeat(mean_prob[:, :, np.newaxis], len(timeseries), axis=-1)
+        error_stable = self._mse(probs_cube, pred_prob_stable)
+
+        # break point detection
+        for i in range(self.min_segment_length, len(timeseries) - self.min_segment_length):
+
+            # compute predicted
+            probs_presegment = probs_cube[:, :, :i]
+            mean_prob_presegment = np.mean(probs_presegment, axis=-1)
+            pred_probs_presegment = np.repeat(mean_prob_presegment[:, :, np.newaxis], i, axis=-1)
+
+            probs_postsegment = probs_cube[:, :, i:]
+            mean_prob_postsegment = np.mean(probs_postsegment, axis=-1)
+            pred_probs_postsegment = np.repeat(mean_prob_postsegment[:, :, np.newaxis], len(timeseries) - i, axis=-1)
+
+            # maybe use absolute value here
+            mean_diffs.append(mean_prob_postsegment - mean_prob_presegment)
+
+            pred_probs_break = np.concatenate((pred_probs_presegment, pred_probs_postsegment), axis=-1)
+            mse_break = self._mse(probs_cube, pred_probs_break)
+            errors.append(mse_break)
+
+        errors = np.stack(errors, axis=-1)
+        best_fit = np.argmin(errors, axis=-1)
+
+        min_error_break = np.min(errors, axis=-1)
+        change_candidate = min_error_break * self.error_multiplier < error_stable
+
+        mean_diffs = np.stack(mean_diffs, axis=-1)
+        m, n = mean_diffs.shape[:2]
+        mean_diff = mean_diffs[np.arange(m)[:, None], np.arange(n), best_fit]
+        change = np.logical_and(change_candidate, mean_diff > self.min_prob_diff)
+
+        # self.cached_fit = np.zeros((dataset_helpers.get_yx_size(dataset, aoi_id)), dtype=np.uint8)
+        self.cached_fit = np.where(change, best_fit + self.min_segment_length, 0)
+
+        self.fitted_dataset = dataset
+        self.fitted_aoi = aoi_id
+
+    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+        self._fit(dataset, aoi_id, include_masked_data)
+
+        # convert to change date product to change detection (0 and length_ts is no change)
+        change = self.cached_fit != 0
+
+        return np.array(change).astype(np.bool)
+
+    def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+        self._fit(dataset, aoi_id, include_masked_data)
+
+        return np.array(self.cached_fit).astype(np.uint8)
 
 
 if __name__ == '__main__':
