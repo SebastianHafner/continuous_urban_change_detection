@@ -16,10 +16,10 @@ def compose_transformations(cfg):
 
 class Numpy2Torch(object):
     def __call__(self, args):
-        img, label = args
-        img_tensor = TF.to_tensor(img)
+        timeseries, label = args
+        timeseries_tensor = TF.to_tensor(timeseries)
         label_tensor = TF.to_tensor(label)
-        return img_tensor, label_tensor
+        return timeseries_tensor[0, ], label_tensor[0, 0, ]
 
 
 class RandomNoise(object):

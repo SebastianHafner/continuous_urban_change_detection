@@ -13,13 +13,15 @@ import numpy as np
 from tabulate import tabulate
 import wandb
 
-from utils import datasets
+from utils import datasets, metrics
 
 from networks.network_loader import create_network, save_checkpoint
-
+from networks import gru
 
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import config
+
+from tqdm import tqdm
 
 
 def run_training(cfg):
@@ -36,20 +38,20 @@ def run_training(cfg):
              }
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
-    time_steps = 10  # this should be variable
     batch_size = cfg.TRAINER.BATCH_SIZE
     in_size = cfg.MODEL.IN_CHANNELS  # number of features
     classes_no = cfg.MODEL.OUT_CHANNELS
 
     # loading network
-    model = nn.GRU(in_size, classes_no, 2) if cfg.MODEL.TYPE == 'gru' else nn.LSTM(in_size, classes_no, 2)
+    model = gru.GRUNet(input_dim=in_size, hidden_dim=10, output_dim=classes_no, n_layers=2)
+    # model = nn.GRU(in_size, classes_no, 2) if cfg.MODEL.TYPE == 'gru' else nn.LSTM(in_size, classes_no, 2)
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
 
     # reset the generators
-    dataset = datasets.TimeseriesDataset(cfg=cfg, run_type='training')
+    dataset = datasets.TrainingDataset(cfg=cfg, run_type='training')
     print(dataset)
 
     dataloader_kwargs = {
@@ -75,6 +77,8 @@ def run_training(cfg):
         start = timeit.default_timer()
         loss_set = []
 
+        h0 = model.init_hidden(batch_size).to(device)
+
         for i, batch in enumerate(dataloader):
 
             model.train()
@@ -83,13 +87,9 @@ def run_training(cfg):
             x = batch['x'].to(device)
             y_gts = batch['y'].to(device)
 
-            y_pred = model(x)
+            y_pred, _ = model(x, h0)
 
-            input_seq = Variable(torch.randn(time_steps, batch_size, in_size))
-            output_seq, _ = model(input_seq)
-            last_output = output_seq[-1]
-
-            loss = criterion(y_pred, y_gts)
+            loss = criterion(y_pred, y_gts[:, 0].long())
             loss.backward()
             optimizer.step()
 
@@ -98,14 +98,14 @@ def run_training(cfg):
             global_step += 1
             epoch_float = global_step / steps_per_epoch
 
+            model_evaluation(model, cfg, device, 'training', epoch_float, global_step, max_samples=1_000)
+
             if global_step % cfg.LOG_FREQ == 0 and not cfg.DEBUG:
                 print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
                 # evaluation on sample of training and validation set
-                train_argmaxF1 = model_evaluation(net, cfg, device, thresholds, 'training', epoch_float, global_step,
-                                                  max_samples=1_000)
-                _ = model_evaluation(net, cfg, device, thresholds, 'validation', epoch_float, global_step,
-                                     specific_index=train_argmaxF1, max_samples=1_000)
+                model_evaluation(model, cfg, device, 'training', epoch_float, global_step, max_samples=1_000)
+                model_evaluation(model, cfg, device, 'validation', epoch_float, global_step, max_samples=1_000)
 
                 # logging
                 time = timeit.default_timer() - start
@@ -128,18 +128,39 @@ def run_training(cfg):
         print(f'epoch float {epoch_float} (step {global_step}) - epoch {epoch}')
         if epoch in save_checkpoints and not cfg.DEBUG:
             print(f'saving network', flush=True)
-            save_checkpoint(net, optimizer, epoch, global_step, cfg)
-            # logs to load network
-            train_argmaxF1 = model_evaluation(net, cfg, device, thresholds, 'training', epoch_float, global_step)
-            validation_argmaxF1 = model_evaluation(net, cfg, device, thresholds, 'validation', epoch_float,
-                                                   global_step, specific_index=train_argmaxF1)
-            wandb.log({
-                'net_checkpoint': epoch,
-                'checkpoint_step': global_step,
-                'train_threshold': train_argmaxF1 / 100,
-                'validation_threshold': validation_argmaxF1 / 100
-            })
-            model_testing(net, cfg, device, 50, global_step, epoch_float)
+            save_checkpoint(model, optimizer, epoch, global_step, cfg)
+
+
+def model_evaluation(model, cfg, device: str, run_type: str, epoch_float: float, global_step: int,
+                     max_samples: int = 1_000):
+
+    y_gts, y_preds = [], []
+
+    model.to(device)
+    model.eval()
+
+    dataset = datasets.InferenceDataset(cfg, run_type)
+
+    h0 = model.init_hidden(4).to(device)
+    sm = torch.nn.Softmax(dim=1)
+    for index in range(len(dataset)):
+
+        patch = dataset.__getitem__(index)
+        x = patch['x'].to(device)
+        y_gt = patch['y'].to(device)
+
+        y_pred, _ = model(x, h0)
+        y_pred = sm(y_pred)
+        y_pred = torch.argmax(y_pred, dim=1)
+
+        y_gts.append(y_gt.flatten().cpu().numpy())
+        y_preds.append(y_pred.flatten().cpu().numpy())
+
+    y_gts, y_preds = np.concatenate(y_gts), np.concatenate(y_preds)
+    f1 = metrics.compute_f1_score(y_preds, y_gts)
+    p = metrics.compute_precision(y_preds, y_gts)
+    r = metrics.compute_recall(y_preds, y_gts)
+
 
 
 if __name__ == '__main__':
