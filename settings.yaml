@@ -8,6 +8,7 @@ DATASET_NAMES:
   OSCD: 'oscd_s1s2_dataset'
 
 CONFIG_NAME: 'fusionda_cons05_jaccardmorelikeloss'
+REGION: 'NA_AU'
 
 INCLUDE_MASKED_DATA: True
 
