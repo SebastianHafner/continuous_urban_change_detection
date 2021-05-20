@@ -5,14 +5,18 @@ import timeit
 import torch
 from torch import optim
 from torch.utils import data as torch_data
+import torch.nn as nn
+from torch.autograd import Variable
+
+import numpy as np
 
 from tabulate import tabulate
 import wandb
 
+from utils import datasets
+
 from networks.network_loader import create_network, save_checkpoint
 
-from utils.datasets import FeatureTimeSeriesDataset
-from utils.loss import get_criterion
 
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import config
@@ -32,14 +36,20 @@ def run_training(cfg):
              }
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
-    net = create_network(cfg)
-    net.to(device)
-    optimizer = optim.AdamW(net.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
+    time_steps = 10  # this should be variable
+    batch_size = cfg.TRAINER.BATCH_SIZE
+    in_size = cfg.MODEL.IN_CHANNELS  # number of features
+    classes_no = cfg.MODEL.OUT_CHANNELS
 
-    criterion = get_criterion(cfg.MODEL.LOSS_TYPE)
+    # loading network
+    model = nn.GRU(in_size, classes_no, 2) if cfg.MODEL.TYPE == 'gru' else nn.LSTM(in_size, classes_no, 2)
+    model.to(device)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.AdamW(model.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
 
     # reset the generators
-    dataset = UrbanExtractionDataset(cfg=cfg, dataset='training')
+    dataset = datasets.TimeseriesDataset(cfg=cfg, run_type='training')
     print(dataset)
 
     dataloader_kwargs = {
@@ -53,14 +63,11 @@ def run_training(cfg):
 
     # unpacking cfg
     epochs = cfg.TRAINER.EPOCHS
-    save_checkpoints = cfg.SAVE_CHECKPOINTS
+    save_checkpoints = cfg.CHECKPOINTS.SAVE
     steps_per_epoch = len(dataloader)
 
     # tracking variables
     global_step = epoch_float = 0
-
-    # for logging
-    thresholds = torch.linspace(0, 1, 101)
 
     for epoch in range(1, epochs + 1):
         print(f'Starting epoch {epoch}/{epochs}.')
@@ -70,13 +77,17 @@ def run_training(cfg):
 
         for i, batch in enumerate(dataloader):
 
-            net.train()
+            model.train()
             optimizer.zero_grad()
 
             x = batch['x'].to(device)
             y_gts = batch['y'].to(device)
 
-            y_pred = net(x)
+            y_pred = model(x)
+
+            input_seq = Variable(torch.randn(time_steps, batch_size, in_size))
+            output_seq, _ = model(input_seq)
+            last_output = output_seq[-1]
 
             loss = criterion(y_pred, y_gts)
             loss.backward()

@@ -2,30 +2,29 @@ SEED: 7
 DEBUG: True
 LOG_FREQ: 100
 OUTPUT_BASE_DIR: '/storage/shafner/continuous_urban_change_detection/networks'
-SAVE_CHECKPOINTS: [20]
-INFERENCE:
-  CHECKPOINT: 0
+CHECKPOINTS:
+  SAVE: [10]
 
 MODEL:
   TYPE: 'gru'
   OUT_CHANNELS: 1
-  IN_CHANNELS: 12
+  IN_CHANNELS: 1
   LOSS_TYPE: 'L2'
   TOPOLOGY: [64, 128,]
 
 DATALOADER:
   NUM_WORKER: 16
   SHUFFLE: True
-  CONFIG_NAME: 'buildings'
-  LABEL_THRESH: 0.0
-
+  CONFIG_NAME: 'optical_jaccardmorelikeloss'
+  INPUT: 'prob'  # prob or features
+  OUTPUT: 'change'  # change or change_date
 
 DATASETS:
-  PATH: '/storage/shafner/continuous_urban_change_detection/spacenet7_s1s2_dataset/'
-  TRAINING: []
-  VALIDATION: []
-  SUBSET_FEATURES: False
-  SUBSET_PERCENTILE: 90
+  ROOT_PATH: '/storage/shafner/continuous_urban_change_detection'
+  NAME: 'spacenet7'
+  AOI_IDS:
+    TRAINING: ['L15-0358E-1220N_1433_3310_13']
+    VALIDATION: []
 
 TRAINER:
   LR: 1e-4
