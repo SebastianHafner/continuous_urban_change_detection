@@ -51,7 +51,7 @@ def run_training(cfg):
     optimizer = optim.AdamW(model.parameters(), lr=cfg.TRAINER.LR, weight_decay=0.01)
 
     # reset the generators
-    dataset = datasets.TrainingDataset(cfg=cfg, run_type='training')
+    dataset = datasets.TimeseriesDataset(cfg=cfg, run_type='training')
     print(dataset)
 
     dataloader_kwargs = {
@@ -79,7 +79,7 @@ def run_training(cfg):
 
         h0 = model.init_hidden(batch_size).to(device)
 
-        for i, batch in enumerate(dataloader):
+        for i, batch in enumerate(tqdm(dataloader)):
 
             model.train()
             optimizer.zero_grad()
@@ -89,7 +89,7 @@ def run_training(cfg):
 
             y_pred, _ = model(x, h0)
 
-            loss = criterion(y_pred, y_gts[:, 0].long())
+            loss = criterion(y_pred, y_gts)
             loss.backward()
             optimizer.step()
 
@@ -98,14 +98,15 @@ def run_training(cfg):
             global_step += 1
             epoch_float = global_step / steps_per_epoch
 
-            model_evaluation(model, cfg, device, 'training', epoch_float, global_step, max_samples=1_000)
+            if cfg.DEBUG:
+                model_evaluation(model, cfg, device, 'training', epoch_float, global_step)
 
             if global_step % cfg.LOG_FREQ == 0 and not cfg.DEBUG:
                 print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
                 # evaluation on sample of training and validation set
-                model_evaluation(model, cfg, device, 'training', epoch_float, global_step, max_samples=1_000)
-                model_evaluation(model, cfg, device, 'validation', epoch_float, global_step, max_samples=1_000)
+                model_evaluation(model, cfg, device, 'training', epoch_float, global_step)
+                model_evaluation(model, cfg, device, 'validation', epoch_float, global_step)
 
                 # logging
                 time = timeit.default_timer() - start
@@ -131,27 +132,32 @@ def run_training(cfg):
             save_checkpoint(model, optimizer, epoch, global_step, cfg)
 
 
-def model_evaluation(model, cfg, device: str, run_type: str, epoch_float: float, global_step: int,
-                     max_samples: int = 1_000):
+def model_evaluation(model, cfg, device: str, run_type: str, epoch_float: float, global_step: int):
 
     y_gts, y_preds = [], []
 
     model.to(device)
     model.eval()
 
-    dataset = datasets.InferenceDataset(cfg, run_type)
-
-    h0 = model.init_hidden(4).to(device)
+    dataset = datasets.TimeseriesDataset(cfg, run_type)
     sm = torch.nn.Softmax(dim=1)
-    for index in range(len(dataset)):
 
-        patch = dataset.__getitem__(index)
-        x = patch['x'].to(device)
-        y_gt = patch['y'].to(device)
+    for aoi_id in dataset.aoi_ids:
 
-        y_pred, _ = model(x, h0)
+        probs = dataset._load_data_for_aoi(aoi_id)
+        probs = torch.tensor(probs).to(device).float()
+        m, n, seq_length = probs.shape
+        probs = torch.reshape(probs, (m * n, seq_length))
+        probs = probs.unsqueeze(-1)
+
+        h0 = model.init_hidden(m * n).to(device)
+
+        y_pred, _ = model(probs, h0)
         y_pred = sm(y_pred)
         y_pred = torch.argmax(y_pred, dim=1)
+
+        y_gt = dataset._load_label_for_aoi(aoi_id)
+        y_gt = torch.tensor(y_gt).to(device).float()
 
         y_gts.append(y_gt.flatten().cpu().numpy())
         y_preds.append(y_pred.flatten().cpu().numpy())
@@ -160,6 +166,8 @@ def model_evaluation(model, cfg, device: str, run_type: str, epoch_float: float,
     f1 = metrics.compute_f1_score(y_preds, y_gts)
     p = metrics.compute_precision(y_preds, y_gts)
     r = metrics.compute_recall(y_preds, y_gts)
+
+    print(f'F1 score: {f1:.3f} - Precision: {p:.3f} - Recall: {r:.3f}')
 
 
 

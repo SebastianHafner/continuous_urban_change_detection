@@ -1,6 +1,6 @@
 SEED: 7
 DEBUG: True
-LOG_FREQ: 100
+LOG_FREQ: 1000
 OUTPUT_BASE_DIR: '/storage/shafner/continuous_urban_change_detection/networks'
 CHECKPOINTS:
   SAVE: [10]
@@ -21,14 +21,14 @@ DATALOADER:
 
 DATASETS:
   ROOT_PATH: '/storage/shafner/continuous_urban_change_detection'
-  NAME: 'spacenet7'
+  NAME: 'timeseries_dataset'
   AOI_IDS:
     TRAINING: ['L15-0358E-1220N_1433_3310_13']
     VALIDATION: []
 
 TRAINER:
   LR: 1e-4
-  BATCH_SIZE: 8
+  BATCH_SIZE: 128
   EPOCHS: 20
   OPTIMIZER: 'adamw'
 
