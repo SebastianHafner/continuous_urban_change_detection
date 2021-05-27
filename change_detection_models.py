@@ -2,6 +2,7 @@ import numpy as np
 from skimage.filters import threshold_otsu, threshold_local
 from abc import ABC, abstractmethod
 from utils import prediction_helpers, dataset_helpers
+import scipy
 
 
 class ChangeDetectionMethod(ABC):
@@ -305,12 +306,10 @@ class BreakPointDetection(ChangeDatingMethod):
         change = np.logical_and(change_candidate, mean_diff > self.min_prob_diff)
 
         if self.noise_reduction:
-            coefficients = self.exponential_distribution(np.arange(self.length_ts))[::-1]
-            probs_cube = probs_cube.transpose((2, 0, 1))
-            probs_cube = coefficients[:, np.newaxis, np.newaxis] * probs_cube
-            probs_exp = np.sum(probs_cube, axis=0)
-            bua = probs_exp > 0.5
-            change = np.logical_and(change, bua)
+            kernel = np.ones((3, 3), dtype=np.uint8)
+            change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
+            noise = change_count == 1
+            change[noise] = 0
 
         # self.cached_fit = np.zeros((dataset_helpers.get_yx_size(dataset, aoi_id)), dtype=np.uint8)
         self.cached_fit = np.where(change, best_fit + self.min_segment_length, 0)

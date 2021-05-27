@@ -45,7 +45,7 @@ class ChangeConfidenceColorMap(object):
 
 
 def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'true_color',
-                 scale_factor: float = 0.4):
+                 rescale_factor: float = 0.4):
     ax.set_xticks([])
     ax.set_yticks([])
     file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
@@ -53,10 +53,9 @@ def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str 
         return
     img, _, _ = geofiles.read_tif(file)
     band_indices = [2, 1, 0] if vis == 'true_color' else [6, 2, 1]
-    bands = img[:, :, band_indices] / scale_factor
+    bands = img[:, :, band_indices] / rescale_factor
     bands = bands.clip(0, 1)
     ax.imshow(bands)
-
 
 
 def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'VV'):
@@ -120,6 +119,27 @@ def plot_change_data_bar(ax, dates: list):
 
 def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
     ax.imshow(img.clip(0, 1), cmap=cmap)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def plot_classification(ax, pred: np.ndarray, dataset: str, aoi_id: str, include_masked_data: bool = False):
+    label = label_helpers.generate_change_label(dataset, aoi_id, include_masked_data).astype(np.bool)
+    pred = pred.astype(np.bool)
+    tp = np.logical_and(pred, label)
+    fp = np.logical_and(pred, ~label)
+    fn = np.logical_and(~pred, label)
+
+    img = np.zeros(pred.shape, dtype=np.uint8)
+    m, n = img.shape
+
+    img[tp] = 1
+    img[fp] = 2
+    img[fn] = 3
+
+    colors = [(0, 0, 0), (1, 1, 1), (142/255, 1, 0), (140/255, 25/255, 140/255)]
+    cmap = mpl.colors.ListedColormap(colors)
+    ax.imshow(img, cmap=cmap, vmin=0, vmax=3)
     ax.set_xticks([])
     ax.set_yticks([])
 
