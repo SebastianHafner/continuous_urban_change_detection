@@ -46,6 +46,14 @@ def export_probability_cube(dataset: str, aoi_id: str):
     geofiles.write_tif(file, prob_cube, transform, crs)
 
 
+def plot_constant_function_fit(dataset: str, aoi_id: str, pixel_coords: tuple):
+    pass
+
+
+def plot_piecewise_constant_function_fit(dataset: str, aoi_id: str, pixel_coords: tuple):
+    pass
+
+
 if __name__ == '__main__':
     ds = 'spacenet7'
     aoi_id = 'L15-0358E-1220N_1433_3310_13'
