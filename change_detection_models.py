@@ -225,7 +225,8 @@ class Thresholding(ChangeDetectionMethod):
 
 class BreakPointDetection(ChangeDatingMethod):
 
-    def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.1, min_segment_length: int = 3):
+    def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.1, min_segment_length: int = 3,
+                 improve_last: bool = False, improve_first: bool = False, noise_reduction: bool = True):
         super().__init__('breakpointdetection')
         self.fitted_dataset = None
         self.fitted_aoi = None
@@ -237,6 +238,9 @@ class BreakPointDetection(ChangeDatingMethod):
         self.error_multiplier = error_multiplier
         self.min_prob_diff = min_prob_diff
         self.min_segment_length = min_segment_length
+        self.improve_last = improve_last
+        self.improve_first = improve_first
+        self.noise_reduction = noise_reduction
 
     def _fit(self, dataset: str, aoi_id: str, include_masked_data: bool):
         if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
@@ -254,6 +258,21 @@ class BreakPointDetection(ChangeDatingMethod):
         mean_prob = np.mean(probs_cube, axis=-1)
         pred_prob_stable = np.repeat(mean_prob[:, :, np.newaxis], len(timeseries), axis=-1)
         error_stable = self._mse(probs_cube, pred_prob_stable)
+
+        if self.improve_first:
+            coefficients = self.exponential_distribution(np.arange(self.length_ts))
+            probs_cube = probs_cube.transpose((2, 0, 1))
+            probs_cube = coefficients[:, np.newaxis, np.newaxis] * probs_cube
+            probs_exp = np.sum(probs_cube, axis=0)
+            probs_cube[0, :, :] = probs_exp
+            probs_cube = probs_cube.transpose((1, 2, 0))
+
+        if self.improve_last:
+            coefficients = self.exponential_distribution(np.arange(self.length_ts))[::-1]
+            probs_cube_exp = coefficients[:, np.newaxis, np.newaxis] * probs_cube.transpose((2, 0, 1))
+            probs_exp = np.sum(probs_cube_exp, axis=0)
+            probs_cube[:, :, -1] = probs_exp
+
 
         # break point detection
         for i in range(self.min_segment_length, len(timeseries) - self.min_segment_length):
@@ -285,6 +304,14 @@ class BreakPointDetection(ChangeDatingMethod):
         mean_diff = mean_diffs[np.arange(m)[:, None], np.arange(n), best_fit]
         change = np.logical_and(change_candidate, mean_diff > self.min_prob_diff)
 
+        if self.noise_reduction:
+            coefficients = self.exponential_distribution(np.arange(self.length_ts))[::-1]
+            probs_cube = probs_cube.transpose((2, 0, 1))
+            probs_cube = coefficients[:, np.newaxis, np.newaxis] * probs_cube
+            probs_exp = np.sum(probs_cube, axis=0)
+            bua = probs_exp > 0.5
+            change = np.logical_and(change, bua)
+
         # self.cached_fit = np.zeros((dataset_helpers.get_yx_size(dataset, aoi_id)), dtype=np.uint8)
         self.cached_fit = np.where(change, best_fit + self.min_segment_length, 0)
 
@@ -303,6 +330,10 @@ class BreakPointDetection(ChangeDatingMethod):
         self._fit(dataset, aoi_id, include_masked_data)
 
         return np.array(self.cached_fit).astype(np.uint8)
+
+    @ staticmethod
+    def exponential_distribution(x: np.ndarray, la: float = 0.25) -> np.ndarray:
+        return la * np.e ** (-la * x)
 
 
 class BackwardsBreakPointDetection(ChangeDatingMethod):
@@ -332,21 +363,12 @@ class BackwardsBreakPointDetection(ChangeDatingMethod):
         probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data)
 
         if self.improved_final_prediction:
-
-
             coefficients = self.exponential_distribution(np.arange(self.length_ts))[::-1]
-
-            pred_cube = pred_cube.transpose((2, 0, 1))
-
-            pred_mean = np.mean(pred_cube, axis=0)
-            pred_mean = pred_mean > 0.5
-            preds_mean.append(pred_mean.flatten())
-
-            pred_cube = coefficients[:, np.newaxis, np.newaxis] * pred_cube
-            pred_exp = np.sum(pred_cube, axis=0)
-            pred_exp = pred_exp > 0.5
-            preds_exp.append(pred_exp.flatten())
-
+            probs_cube = probs_cube.transpose((2, 0, 1))
+            probs_cube = coefficients[:, np.newaxis, np.newaxis] * probs_cube
+            probs_exp = np.sum(probs_cube, axis=0)
+            probs_cube[-1, :, :] = probs_exp
+            probs_cube = probs_cube.transpose((1, 2, 0))
 
         errors = []
         mean_diffs = []
@@ -356,6 +378,8 @@ class BackwardsBreakPointDetection(ChangeDatingMethod):
         pred_prob_stable = np.repeat(mean_prob[:, :, np.newaxis], len(timeseries), axis=-1)
         error_stable = self._mse(probs_cube, pred_prob_stable)
 
+        pred_last = probs_cube[:, :, -1]
+
         # break point detection
         for i in range(self.min_segment_length, len(timeseries) - self.min_segment_length):
             # compute predicted
@@ -363,12 +387,8 @@ class BackwardsBreakPointDetection(ChangeDatingMethod):
             mean_prob_presegment = np.mean(probs_presegment, axis=-1)
             pred_probs_presegment = np.repeat(mean_prob_presegment[:, :, np.newaxis], i, axis=-1)
 
-            probs_postsegment = probs_cube[:, :, i:]
-            mean_prob_postsegment = np.mean(probs_postsegment, axis=-1)
-            pred_probs_postsegment = np.repeat(mean_prob_postsegment[:, :, np.newaxis], len(timeseries) - i, axis=-1)
-
             # maybe use absolute value here
-            mean_diffs.append(mean_prob_postsegment - mean_prob_presegment)
+            mean_diffs.append(prob_last - mean_prob_presegment)
 
             pred_probs_break = np.concatenate((pred_probs_presegment, pred_probs_postsegment), axis=-1)
             mse_break = self._mse(probs_cube, pred_probs_break)

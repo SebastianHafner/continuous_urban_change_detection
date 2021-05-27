@@ -6,7 +6,7 @@ import yaml
 
 
 def settings() -> dict:
-    with open('settings.yaml') as file:
+    with open(Path.cwd() / 'settings.yaml') as file:
         s = yaml.load(file, Loader=yaml.FullLoader)
     return s
 
@@ -142,7 +142,7 @@ def get_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
         if include_masked_data:
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1 and s2]
             # trim time series at beginning and end such that it starts and ends with an unmasked timestamp
-            unmasked_indices = [i for i, (_, _, mask, *_) in enumerate(aoi_md) if not mask]
+            unmasked_indices = [i for i, (_, _, mask, *_) in enumerate(timeseries) if not mask]
             min_unmasked, max_unmasked = min(unmasked_indices), max(unmasked_indices)
             timeseries = timeseries[min_unmasked:max_unmasked + 1]
         else:
@@ -160,10 +160,18 @@ def length_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = Fal
 
 def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
     ts = timestamps(dataset)
+    s = settings()
     if dataset == 'spacenet7':
-        aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
+        if s['SUBSET_SPACENET7']['ACTIVATE']:
+            aoi_ids = s['SUBSET_SPACENET7']['AOI_IDS']
+        else:
+            # handle exclude missing aoi ids
+            aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
     else:
-        aoi_ids = ts.keys()
+        if s['SUBSET_OSCD']['ACTIVATE']:
+            aoi_ids = s['SUBSET_OSCD']['AOI_IDS']
+        else:
+            aoi_ids = ts.keys()
     return sorted(aoi_ids)
 
 
@@ -187,3 +195,4 @@ def get_yx_size(dataset: str, aoi_id: str) -> tuple:
 def date2str(date: list):
     year, month, *_ = date
     return f'{year-2000:02d}-{month:02d}'
+

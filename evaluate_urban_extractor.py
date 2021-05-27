@@ -146,6 +146,57 @@ def test_last_prediction_improvement():
     print(f'{f1_ref:.3f} (ref) - {f1_mean:.3f} (mean) - {f1_exp:.3f} (exp)')
 
 
+def plot_last_prediction_improvement():
+
+    f1s_ref, f1s_exp, f1s_mean, labels = [], [], [], []
+
+    aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
+    for i, aoi_id in enumerate(tqdm(aoi_ids)):
+
+        n = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        pred_cube = prediction_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        pred_cube = pred_cube.transpose((2, 0, 1))
+
+        label = label_helpers.load_label_in_timeseries(aoi_id, -1, dataset_helpers.include_masked())
+
+        pred_ref = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
+                                                                    dataset_helpers.include_masked())
+        pred_ref = pred_ref > 0.5
+        f1s_ref.append(metrics.compute_f1_score(pred_ref.flatten(), label.flatten()))
+
+        pred_mean = np.mean(pred_cube, axis=0)
+        pred_mean = pred_mean > 0.5
+        f1s_mean.append(metrics.compute_f1_score(pred_mean.flatten(), label.flatten()))
+
+        def exponential_distribution(x: np.ndarray, la: float = 0.25) -> np.ndarray:
+            return la * np.e ** (-la * x)
+        coefficients = exponential_distribution(np.arange(n))[::-1]
+
+        pred_cube = coefficients[:, np.newaxis, np.newaxis] * pred_cube
+        pred_exp = np.sum(pred_cube, axis=0)
+        pred_exp = pred_exp > 0.5
+        f1s_exp.append(metrics.compute_f1_score(pred_exp.flatten(), label.flatten()))
+
+        labels.append(aoi_id[4:15])
+
+    fontsize = 20
+    fig, ax = plt.subplots(1, 1, figsize=(len(labels) / 2, 10))
+    x_pos = np.arange(len(labels))
+    ax.scatter(x_pos, f1s_ref, c='k', label='last')
+    ax.scatter(x_pos, f1s_mean, c='r', label='mean')
+    ax.scatter(x_pos, f1s_exp, c='g', label='exp')
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(labels, rotation=90, fontsize=fontsize)
+
+    ax.set_ylabel('F1 score', fontsize=fontsize)
+    y_ticks = np.linspace(0, 1, 6)
+    ax.set_ylim((0, 1))
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([f'{y_tick:.1f}' for y_tick in y_ticks], fontsize=fontsize)
+    ax.legend(fontsize=fontsize)
+    plt.show()
+
+
 if __name__ == '__main__':
     for aoi_id in dataset_helpers.get_aoi_ids('spacenet7'):
         # run_urban_extractor_evaluation(config_name, aoi_id)
@@ -154,6 +205,6 @@ if __name__ == '__main__':
 
     # show_f1_evaluation(include_masked_data=True)
 
-    test_last_prediction_improvement()
+    plot_last_prediction_improvement()
 
 
