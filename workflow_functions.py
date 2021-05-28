@@ -3,6 +3,7 @@ from utils import geofiles, visualization, dataset_helpers, prediction_helpers, 
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+import change_detection_models as cd_models
 
 
 def produce_workflow_data(dataset: str, aoi_id: str):
@@ -111,6 +112,25 @@ def plot_piecewise_constant_function_fit(dataset: str, aoi_id: str, pixel_coords
     plt.show()
 
 
+def plot_change_detection_and_dating_results(dataset: str, aoi_id: str):
+    model = cd_models.BreakPointDetection(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
+    change = model.change_detection(dataset, aoi_id, dataset_helpers.include_masked())
+    change_date = model.change_dating(dataset, aoi_id, dataset_helpers.include_masked())
+
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    visualization.plot_blackwhite(ax, change)
+    output_path = dataset_helpers.root_path() / 'plots' / 'workflow' / 'change'
+    output_file = output_path / f'change_detection_{aoi_id}.png'
+    plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
+
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    visualization.plot_change_date(ax, change_date,
+                                   dataset_helpers.length_timeseries(dataset, aoi_id, dataset_helpers.include_masked()))
+    output_path = dataset_helpers.root_path() / 'plots' / 'workflow' / 'change'
+    output_file = output_path / f'change_dating_{aoi_id}.png'
+    plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
+
+
 if __name__ == '__main__':
     ds = 'spacenet7'
     aoi_id = 'L15-0358E-1220N_1433_3310_13'
@@ -119,4 +139,5 @@ if __name__ == '__main__':
     # export_probability_cube(ds, aoi_id)
 
     # plot_constant_function_fit(ds, aoi_id, pixel)
-    plot_piecewise_constant_function_fit(ds, aoi_id, pixel, [4, 10, 16])
+    # plot_piecewise_constant_function_fit(ds, aoi_id, pixel, [4, 10, 16])
+    plot_change_detection_and_dating_results(ds, aoi_id)
