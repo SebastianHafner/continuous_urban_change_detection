@@ -41,6 +41,8 @@ class TimeseriesDataset(torch.utils.data.Dataset):
 
         self.transform = augmentations.compose_transformations(cfg)
 
+        self.n_classes = 2
+
     def __getitem__(self, index: int) -> dict:
 
         aoi_id, i, j = self.samples[index]
@@ -95,3 +97,21 @@ class TimeseriesDataset(torch.utils.data.Dataset):
 
     def __str__(self) -> str:
         return 'not implemented'
+
+    def class_weights(self) -> list:
+        n_class_pixels = np.zeros(self.n_classes)
+        bins = np.arange(-0.5, self.n_classes, 1)
+        for sample in self.samples:
+            aoi_id, i, j = sample
+            label = self._load_label(aoi_id, i, j)
+            label = np.argmax(label, axis=-1)
+            hist_sample, _ = np.histogram(label, bins=bins)
+            n_class_pixels += hist_sample
+        return n_class_pixels / np.sum(n_class_pixels)
+
+    def sampler(self):
+        # TODO: investigate baseline
+        pass
+        # weights = np.array([float(sample['weight']) for sample in self.samples])
+        # sampler = torch_data.WeightedRandomSampler(weights=weights, num_samples=self.length, replacement=True)
+        # return sampler

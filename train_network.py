@@ -70,6 +70,7 @@ def run_training(cfg):
 
     # tracking variables
     global_step = epoch_float = 0
+    n = n_pos = 0
 
     for epoch in range(1, epochs + 1):
         print(f'Starting epoch {epoch}/{epochs}.')
@@ -94,14 +95,13 @@ def run_training(cfg):
             optimizer.step()
 
             loss_set.append(loss.item())
+            n += torch.numel(y_gts)
+            n_pos += torch.sum(y_gts)
 
             global_step += 1
             epoch_float = global_step / steps_per_epoch
 
-            if cfg.DEBUG:
-                model_evaluation(model, cfg, device, 'training', epoch_float, global_step)
-
-            if global_step % cfg.LOG_FREQ == 0 and not cfg.DEBUG:
+            if global_step % cfg.LOG_FREQ == 0:
                 print(f'Logging step {global_step} (epoch {epoch_float:.2f}).')
 
                 # evaluation on sample of training and validation set
@@ -110,15 +110,17 @@ def run_training(cfg):
 
                 # logging
                 time = timeit.default_timer() - start
-                wandb.log({
-                    'loss': np.mean(loss_set),
-                    'labeled_percentage': 100,
-                    'time': time,
-                    'step': global_step,
-                    'epoch': epoch_float,
-                })
+                if not cfg.DEBUG:
+                    wandb.log({
+                        'loss': np.mean(loss_set),
+                        'positive_ratio': n_pos / n,
+                        'time': time,
+                        'step': global_step,
+                        'epoch': epoch_float,
+                    })
                 start = timeit.default_timer()
                 loss_set = []
+                n = n_pos = 0
 
             if cfg.DEBUG:
                 break
