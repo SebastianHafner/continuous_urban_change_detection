@@ -39,12 +39,12 @@ def dataset_path(dataset: str) -> Path:
 # path to origin SpaceNet7 dataset
 def spacenet7_path() -> Path:
     s = settings()
-    return Path(s['PATHS']['SPACENET7'])
+    return Path(s['PATHS']['SPACENET7_PATH'])
 
 
 def oscd_path() -> Path:
     s = settings()
-    return Path(s['PATHS']['OSCD'])
+    return Path(s['PATHS']['OSCD_PATH'])
 
 
 def bad_data(dataset: str) -> dict:

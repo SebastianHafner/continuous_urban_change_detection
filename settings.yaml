@@ -4,7 +4,7 @@ PATHS:
   OSCD_PATH: '/storage/shafner/urban_change_detection/OSCD_dataset'  # this is the original OSCD dataset
 
 DATASET_NAMES:
-  SPACENET7: 'spacenet7_s1s2_dataset_v2'
+  SPACENET7: 'spacenet7_s1s2_dataset_v3'
   OSCD: 'oscd_s1s2_dataset'
 
 INPUT: 'sentinel1'
@@ -18,7 +18,7 @@ PLOTTING:
   PLOTSIZE: 3
 
 SUBSET_SPACENET7:
-  ACTIVATE: True
+  ACTIVATE: False
   AOI_IDS: [
     'L15-0331E-1257N_1327_3160_13',
     'L15-0357E-1223N_1429_3296_13',
