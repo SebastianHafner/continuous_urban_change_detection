@@ -49,7 +49,7 @@ def assemble_spacenet7_timestamps():
 # merges buildings from a time series for a site into one geojson file
 def assemble_spacenet7_buildings():
     dataset_path = dataset_helpers.spacenet7_path() / 'train'
-    aoi_paths = [f for f in dataset_path.iterdir() if f.is_dir()]
+    aoi_paths = sorted([f for f in dataset_path.iterdir() if f.is_dir()])
 
     for aoi_path in aoi_paths:
         aoi_id = aoi_path.name
@@ -57,7 +57,7 @@ def assemble_spacenet7_buildings():
         all_buildings = None
 
         labels_path = aoi_path / 'labels_match'
-        label_files = [f for f in labels_path.glob('**/*')]
+        label_files = sorted([f for f in labels_path.glob('**/*')])
 
         for label_file in tqdm(label_files):
             data = geofiles.load_json(label_file)
@@ -157,8 +157,8 @@ def generate_spacenet7_metadata_file():
 
 
 if __name__ == '__main__':
-    assemble_spacenet7_timestamps()
+    # assemble_spacenet7_timestamps()
     generate_spacenet7_metadata_file()
     # assemble_spacenet7_masks()
-    # assemble_buildings('train')
+    # assemble_spacenet7_buildings()
     # generate_spacenet7_dataset_file(ROOT_PATH / 'continuous_urban_change_detection' / 'spacenet7_s1s2_dataset')
