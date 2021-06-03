@@ -1,7 +1,7 @@
 import numpy as np
 from skimage.filters import threshold_otsu, threshold_local
 from abc import ABC, abstractmethod
-from utils import prediction_helpers, dataset_helpers
+from utils import input_helpers, dataset_helpers
 import scipy
 
 
@@ -62,8 +62,7 @@ class StepFunctionModel(ChangeDatingMethod):
         dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
         self.length_ts = len(dates)
 
-        probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data,
-                                                                   self.ts_extension)
+        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data, self.ts_extension)
         data_shape = probs_cube.shape
 
         # fitting stable functions
@@ -106,7 +105,7 @@ class StepFunctionModel(ChangeDatingMethod):
     def model_error(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
         self._fit(dataset, aoi_id)
         y_pred = self._predict(dataset, aoi_id)
-        probs = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data)
+        probs = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data)
         return np.sqrt(self._mse(probs, y_pred))
 
     def model_confidence(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
@@ -165,8 +164,8 @@ class DeepChangeVectorAnalysis(ChangeDetectionMethod):
 
     def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
 
-        features_start = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, 0, include_masked_data)
-        features_end = prediction_helpers.load_features_in_timeseries(dataset, aoi_id, -1, include_masked_data)
+        features_start = input_helpers.load_features_in_timeseries(dataset, aoi_id, 0, include_masked_data)
+        features_end = input_helpers.load_features_in_timeseries(dataset, aoi_id, -1, include_masked_data)
 
         if self.subset_features:
             features_selection = self._get_feature_selection(features_start, features_end)
@@ -192,8 +191,8 @@ class PostClassificationComparison(ChangeDetectionMethod):
         dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
         start_year, start_month, *_ = dates[0]
         end_year, end_month, *_ = dates[-1]
-        probs_start = prediction_helpers.load_prediction(dataset, aoi_id, start_year, start_month)
-        probs_end = prediction_helpers.load_prediction(dataset, aoi_id, end_year, end_month)
+        probs_start = input_helpers.load_input(dataset, aoi_id, start_year, start_month)
+        probs_end = input_helpers.load_input(dataset, aoi_id, end_year, end_month)
         class_start = probs_start > self.threshold
         class_end = probs_end > self.threshold
         if self.ignore_negative_changes:
@@ -213,8 +212,8 @@ class Thresholding(ChangeDetectionMethod):
         dates = dataset_helpers.get_timeseries(dataset, aoi_id)
         start_date = dates[0][:-1]
         end_date = dates[-1][:-1]
-        probs_start = prediction_helpers.load_prediction(dataset, aoi_id, *start_date)
-        probs_end = prediction_helpers.load_prediction(dataset, aoi_id, *end_date)
+        probs_start = input_helpers.load_input(dataset, aoi_id, *start_date)
+        probs_end = input_helpers.load_input(dataset, aoi_id, *end_date)
 
         difference = np.abs(probs_end - probs_start)
 
@@ -250,7 +249,7 @@ class BreakPointDetection(ChangeDatingMethod):
         timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
         self.length_ts = len(timeseries)
 
-        probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data)
+        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data)
 
         errors = []
         mean_diffs = []
@@ -359,7 +358,7 @@ class BackwardsBreakPointDetection(ChangeDatingMethod):
         timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
         self.length_ts = len(timeseries)
 
-        probs_cube = prediction_helpers.load_prediction_timeseries(dataset, aoi_id, include_masked_data)
+        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data)
 
         if self.improved_final_prediction:
             coefficients = self.exponential_distribution(np.arange(self.length_ts))[::-1]

@@ -83,16 +83,16 @@ if __name__ == '__main__':
     bpd = cd_models.BreakPointDetection(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2, noise_reduction=True)
     bbpd = cd_models.BackwardsBreakPointDetection(error_multiplier=2, min_prob_diff=0.1, min_segment_length=1,
                                                   improved_final_prediction=True)
-
+    bpd = cd_models.BreakPointDetection(error_multiplier=2, min_prob_diff=0.2, min_segment_length=2)
     model = bpd
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        # qualitative_testing(model, ds, aoi_id, save_plot=False, color_misclassifications=True)
+        qualitative_testing(model, ds, aoi_id, save_plot=False, color_misclassifications=True)
         # quantitative_testing(model, ds, aoi_id)
         pass
 
     # qualitative_testing(model, ds, 'L15-0566E-1185N_2265_3451_13', save_plot=False)
 
 
-    quantitative_testing_dataset(model, ds)
+    # quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
 

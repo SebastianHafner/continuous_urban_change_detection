@@ -7,6 +7,8 @@ DATASET_NAMES:
   SPACENET7: 'spacenet7_s1s2_dataset_v2'
   OSCD: 'oscd_s1s2_dataset'
 
+INPUT: 'sentinel1'
+INPUT_BAND: 'VV'
 CONFIG_NAME: 'fusionda_cons05_jaccardmorelikeloss'
 
 INCLUDE_MASKED_DATA: True
