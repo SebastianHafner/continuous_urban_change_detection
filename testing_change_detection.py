@@ -86,6 +86,7 @@ if __name__ == '__main__':
     bpd = cd_models.BreakPointDetection(error_multiplier=2, min_prob_diff=0.2, min_segment_length=2)
     model = bpd
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
+        print(aoi_id)
         qualitative_testing(model, ds, aoi_id, save_plot=False, color_misclassifications=True)
         # quantitative_testing(model, ds, aoi_id)
         pass
