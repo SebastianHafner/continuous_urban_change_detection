@@ -203,7 +203,7 @@ if __name__ == '__main__':
 
         pass
 
-    # show_f1_evaluation(include_masked_data=True)
+    show_f1_evaluation(include_masked_data=True)
 
     plot_last_prediction_improvement()
 
