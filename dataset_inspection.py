@@ -36,9 +36,6 @@ def visualize_satellite_data(dataset: str, aoi_id: str, save_plot: bool = False)
 
 def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
 
-    if aoi_id in dataset_helpers.missing_aois():
-        return
-
     metadata = dataset_helpers.metadata(dataset)
     ts = metadata['aois'][aoi_id]
     n = len(ts)
@@ -68,6 +65,12 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
                 color = 'cyan'
             else:
                 color = 'red'
+        if gt_available:
+            y_true = label_helpers.load_label(aoi_id, year, month)
+            y_pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
+            y_pred = y_pred > 0.5
+            f1 = metrics.compute_f1_score(y_pred.flatten(), y_true.flatten())
+            title = f'{title} {f1*100:.1f}'
 
         axs[0, i].set_title(title, c=color, fontsize=12, fontweight='bold')
         visualization.plot_prediction(axs[n_rows - 1, i], dataset, aoi_id, year, month)
@@ -125,9 +128,10 @@ def visualize_timeseries_length(dataset: str):
 
 if __name__ == '__main__':
     ds = 'spacenet7'
-    for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        visualize_satellite_data(ds, aoi_id, save_plot=True)
-        # visualize_all_data(ds, aoi_id, config_name=cfg, save_plot=True)
+    for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
+        # visualize_satellite_data(ds, aoi_id, save_plot=True)
+        if i > 6:
+            visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         pass
 

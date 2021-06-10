@@ -68,25 +68,27 @@ def show_precision_recall_evaluation(config_name: str):
     plt.show()
 
 
-def show_f1_evaluation(include_masked_data: bool = False):
+def show_f1_evaluation(sort_by_performance: bool = False):
 
     data = []
 
     aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for aoi_id in tqdm(aoi_ids):
 
-        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, include_masked_data)
+        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
         f1_scores, precisions, recalls = [], [], []
 
         for i in range(length_ts):
-            label = label_helpers.load_label_in_timeseries(aoi_id, i, include_masked_data)
-            pred = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i, include_masked_data)
+            label = label_helpers.load_label_in_timeseries(aoi_id, i, dataset_helpers.include_masked())
+            pred = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i,
+                                                                    dataset_helpers.include_masked())
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
 
         data.append([aoi_id, f1_scores])
 
-    data = sorted(data, key=lambda x: np.mean(x[1]))
+    if sort_by_performance:
+        data = sorted(data, key=lambda x: np.mean(x[1]))
     data_boxplots = [d[1] for d in data]
 
     fontsize = 20
@@ -203,8 +205,8 @@ if __name__ == '__main__':
 
         pass
 
-    show_f1_evaluation(include_masked_data=True)
+    show_f1_evaluation(sort_by_performance=False)
 
-    plot_last_prediction_improvement()
+    # plot_last_prediction_improvement()
 
 
