@@ -1,5 +1,5 @@
 import numpy as np
-from utils import dataset_helpers, prediction_helpers, label_helpers, metrics
+from utils import dataset_helpers, prediction_helpers, label_helpers, metrics, mask_helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -79,6 +79,10 @@ def show_f1_evaluation(sort_by_performance: bool = False):
         f1_scores, precisions, recalls = [], [], []
 
         for i in range(length_ts):
+            year, month = dataset_helpers.get_date_from_index(i, 'spacenet7', aoi_id, dataset_helpers.include_masked())
+            # TODO: maybe fully masked from index
+            if mask_helpers.is_fully_masked('spacenet7', aoi_id, year, month):
+                continue
             label = label_helpers.load_label_in_timeseries(aoi_id, i, dataset_helpers.include_masked())
             pred = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i,
                                                                     dataset_helpers.include_masked())
@@ -205,7 +209,10 @@ if __name__ == '__main__':
 
         pass
 
+
+
     show_f1_evaluation(sort_by_performance=False)
+
 
     # plot_last_prediction_improvement()
 

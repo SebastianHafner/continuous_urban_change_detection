@@ -158,6 +158,13 @@ def length_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = Fal
     return len(ts)
 
 
+def get_date_from_index(index: int, dataset: str, aoi_id: str, include_masked_data: bool = False,
+                        ignore_bad_data: bool = True) -> int:
+    ts = get_timeseries(dataset, aoi_id, include_masked_data, ignore_bad_data)
+    year, month, *_ = ts[index]
+    return year, month
+
+
 def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
     ts = timestamps(dataset)
     s = settings()

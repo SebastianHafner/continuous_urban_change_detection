@@ -40,5 +40,15 @@ def load_masks(dataset: str, aoi_id: str) -> np.ndarray:
     return masks.astype(np.bool)
 
 
+def is_fully_masked(dataset: str, aoi_id: str, year: int, month: int) -> bool:
+    mask = load_mask(dataset, aoi_id, year, month)
+    n_elements = np.size(mask)
+    n_masked = np.sum(mask)
+    # TODO: mismatch due to GEE download probabably
+    if n_elements * 0.9 < n_masked:
+        return True
+    return False
+
+
 if __name__ == '__main__':
     pass
