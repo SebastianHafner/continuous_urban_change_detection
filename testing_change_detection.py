@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 
 def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str, save_plot: bool = False,
-                        color_misclassifications: bool = False, sensor: str = 'sentinel2'):
+                        color_misclassifications: bool = False, sensor: str = 'sentinel2', show_f1: bool = True):
 
     dates = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
     start_year, start_month, *_ = dates[0]
@@ -33,7 +33,12 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
         visualization.plot_classification(axs[3], change, dataset, aoi_id, dataset_helpers.include_masked())
     else:
         visualization.plot_blackwhite(axs[3], change)
-    axs[3].set_title('Change Pred')
+    title = 'Change Pred'
+    if show_f1:
+        label = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked())
+        f1 = metrics.compute_f1_score(change.flatten(), label.flatten())
+        title = f'{title} (F1 {f1:.3f})'
+    axs[3].set_title(title)
 
     if not save_plot:
         plt.show()
@@ -84,15 +89,13 @@ if __name__ == '__main__':
     dcva = cd_models.DeepChangeVectorAnalysis(subset_features=True)
     pcc = cd_models.PostClassificationComparison()
     thresholding = cd_models.Thresholding()
-    sf = cd_models.StepFunctionModel(n_stable=6)
-    bpd = cd_models.BreakPointDetection(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2, noise_reduction=True)
+    sf = cd_models.StepFunctionModelOld(n_stable=6)
     bbpd = cd_models.BackwardsBreakPointDetection(error_multiplier=2, min_prob_diff=0.1, min_segment_length=1,
                                                   improved_final_prediction=True)
-    bpd = cd_models.BreakPointDetection(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
-    bpd_sar = cd_models.BreakPointDetection(error_multiplier=3, min_prob_diff=0.1, min_segment_length=2)
-    model = bpd_sar
+    bpd = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
+    model = bpd
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        # qualitative_testing(model, ds, aoi_id, save_plot=False, color_misclassifications=False, sensor='sentinel2')
+        # qualitative_testing(model, ds, aoi_id, save_plot=True)
         # quantitative_testing(model, ds, aoi_id)
         pass
 

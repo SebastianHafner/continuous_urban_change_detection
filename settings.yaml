@@ -9,7 +9,7 @@ DATASET_NAMES:
 
 INPUT: 'CNN'
 INPUT_BAND: 'VV'
-CONFIG_NAME: 'fusionda_cons05_jaccardmorelikeloss'
+CONFIG_NAME: 'sar_jaccardmorelikeloss'
 
 INCLUDE_MASKED_DATA: True
 
@@ -18,7 +18,7 @@ PLOTTING:
   PLOTSIZE: 3
 
 SUBSET_SPACENET7:
-  ACTIVATE: True
+  ACTIVATE: False
   AOI_IDS: [
     'L15-0457E-1135N_1831_3648_13',
     'L15-0566E-1185N_2265_3451_13',

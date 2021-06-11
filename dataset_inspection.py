@@ -66,12 +66,14 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
             else:
                 color = 'red'
         if gt_available:
-            y_true = label_helpers.load_label(aoi_id, year, month)
-            y_pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
-            y_pred = y_pred > 0.5
-            if mask_helpers.is_fully_masked(dataset, aoi_id, year, month):
+            fully_masked = mask_helpers.is_fully_masked(dataset, aoi_id, year, month)
+            prediction_available = prediction_helpers.prediction_is_available(dataset, aoi_id, year, month)
+            if fully_masked or not prediction_available:
                 f1 = 'NaN'
             else:
+                y_true = label_helpers.load_label(aoi_id, year, month)
+                y_pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
+                y_pred = y_pred > 0.5
                 f1 = metrics.compute_f1_score(y_pred.flatten(), y_true.flatten())
                 f1 = f'{f1*100:.1f}'
             title = f'{title} {f1}'

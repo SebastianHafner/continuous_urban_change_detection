@@ -153,10 +153,12 @@ def plot_change_confidence(ax, change: np.ndarray, confidence: np.ndarray, cmap:
 
 
 def plot_prediction(ax, dataset: str, aoi_id: str, year: int, month: int):
-    pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
-    ax.imshow(pred.clip(0, 1), cmap='gray')
     ax.set_xticks([])
     ax.set_yticks([])
+    if not prediction_helpers.prediction_is_available(dataset, aoi_id, year, month):
+        return
+    pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
+    ax.imshow(pred.clip(0, 1), cmap='gray')
 
 
 def plot_mask(ax, dataset: str, aoi_id: str, year: int, month: int):

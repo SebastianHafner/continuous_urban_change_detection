@@ -31,7 +31,7 @@ class ChangeDatingMethod(ChangeDetectionMethod):
         return np.sum(np.square(y_hat - y), axis=-1) / y.shape[-1]
 
 
-class StepFunctionModel(ChangeDatingMethod):
+class StepFunctionModelOld(ChangeDatingMethod):
 
     def __init__(self, n_stable: int = 2, max_error: float = 0.5, ts_extension: int = 0):
         super().__init__('stepfunction')
@@ -223,11 +223,11 @@ class Thresholding(ChangeDetectionMethod):
         return np.array(change).astype(np.uint8)
 
 
-class BreakPointDetection(ChangeDatingMethod):
+class StepFunctionModel(ChangeDatingMethod):
 
     def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.1, min_segment_length: int = 3,
                  improve_last: bool = False, improve_first: bool = False, noise_reduction: bool = True):
-        super().__init__('breakpointdetection')
+        super().__init__('stepfunction')
         self.fitted_dataset = None
         self.fitted_aoi = None
         # index when changed occurred in the time series
