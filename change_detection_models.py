@@ -1,8 +1,9 @@
 import numpy as np
 from skimage.filters import threshold_otsu, threshold_local
 from abc import ABC, abstractmethod
-from utils import input_helpers, dataset_helpers
+from utils import input_helpers, dataset_helpers, geofiles
 import scipy
+import matplotlib.pyplot as plt
 
 
 class ChangeDetectionMethod(ABC):
@@ -12,7 +13,7 @@ class ChangeDetectionMethod(ABC):
 
     @ abstractmethod
     # returns binary array of changes
-    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
 
@@ -23,113 +24,12 @@ class ChangeDatingMethod(ChangeDetectionMethod):
 
     @ abstractmethod
     # returns int array where numbers correspond to change date (index in dates list)
-    def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
         pass
 
     @staticmethod
     def _mse(y: np.ndarray, y_hat: np.ndarray) -> float:
         return np.sum(np.square(y_hat - y), axis=-1) / y.shape[-1]
-
-
-class StepFunctionModelOld(ChangeDatingMethod):
-
-    def __init__(self, n_stable: int = 2, max_error: float = 0.5, ts_extension: int = 0):
-        super().__init__('stepfunction')
-        self.fitted_dataset = None
-        self.fitted_aoi = None
-        # index when changed occurred in the time series
-        # (no change is index 0 and length_ts for non-urban and urban, respectively)
-        self.cached_fit = None
-        self.length_ts = None
-        self.n_stable = n_stable
-        self.max_error = max_error
-        self.ts_extension = ts_extension
-
-    @staticmethod
-    def _nochange_function(x: np.ndarray, return_value: float) -> np.ndarray:
-        return np.full(x.shape, fill_value=return_value, dtype=np.float)
-
-    @staticmethod
-    def _change_function(x: np.ndarray, x0: float):
-        return np.piecewise(x, [x < x0, x >= x0], [0., 1.])
-
-
-    def _fit(self, dataset: str, aoi_id: str, include_masked_data: bool = False):
-        # fit model to aoi id if it's not fit to it
-        if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
-            return
-
-        dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
-        self.length_ts = len(dates)
-
-        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data, self.ts_extension)
-        data_shape = probs_cube.shape
-
-        # fitting stable functions
-        stable_values = np.linspace(0, 1, self.n_stable)
-        errors_stable = []
-        for stable_value in stable_values:
-            y_pred_nochange = np.full(data_shape, fill_value=stable_value)
-            mse_nochange = self._mse(probs_cube, y_pred_nochange)
-            errors_stable.append(mse_nochange)
-        errors_stable = np.stack(errors_stable)
-        min_error_stable = np.min(errors_stable, axis=0)
-
-        # fitting step functions
-        errors_change = []
-        for x0 in range(1, self.length_ts):
-            y_pred_change = np.zeros(data_shape)
-            y_pred_change[:, :, x0 + self.ts_extension:] = 1
-            mse_change = self._mse(probs_cube, y_pred_change)
-            errors_change.append(mse_change)
-        errors_change = np.stack(errors_change)
-        min_index_change = np.argmin(errors_change, axis=0)
-        min_error_change = np.min(errors_change, axis=0)
-
-        pixels_stable = np.array(min_error_stable < min_error_change)
-        self.cached_fit = np.where(pixels_stable, np.zeros(pixels_stable.shape, dtype=np.uint8), min_index_change + 1)
-
-        self.fitted_dataset = dataset
-        self.fitted_aoi = aoi_id
-
-    def _predict(self, dataset, aoi_id: str) -> np.ndarray:
-        self._fit(dataset, aoi_id)
-        y_pred = np.zeros((*self.cached_fit.shape, self.length_ts), dtype=np.uint8)
-        # TODO: fix this
-        for x0 in range(1, self.length_ts):
-            bool_arr = self.cached_fit == x0
-            y_pred[bool_arr, x0:] = 1
-        return y_pred
-
-    # root mean square error of model
-    def model_error(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        self._fit(dataset, aoi_id)
-        y_pred = self._predict(dataset, aoi_id)
-        probs = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data)
-        return np.sqrt(self._mse(probs, y_pred))
-
-    def model_confidence(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        error = self.model_error(dataset, aoi_id, include_masked_data)
-        confidence = np.clip(self.max_error - error, 0, self.max_error) / self.max_error
-        return confidence
-
-    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        self._fit(dataset, aoi_id, include_masked_data)
-
-        # convert to change date product to change detection (0 and length_ts is no change)
-        change = np.logical_and(self.cached_fit != 0, self.cached_fit != self.length_ts)
-
-        return np.array(change).astype(np.uint8)
-
-    def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        self._fit(dataset, aoi_id)
-        change_date = self.cached_fit.copy()
-        change_date[change_date == self.length_ts] = 0
-        return np.array(change_date).astype(np.uint8)
-
-    # also returns whether a stable pixels is urban or non-urban
-    def change_dating_plus(self, aoi_id: str) -> tuple:
-        pass
 
 
 class DeepChangeVectorAnalysis(ChangeDetectionMethod):
@@ -162,10 +62,10 @@ class DeepChangeVectorAnalysis(ChangeDetectionMethod):
             raise Exception('Unknown thresholding method')
         return binary.astype(np.uint8)
 
-    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
 
-        features_start = input_helpers.load_features_in_timeseries(dataset, aoi_id, 0, include_masked_data)
-        features_end = input_helpers.load_features_in_timeseries(dataset, aoi_id, -1, include_masked_data)
+        features_start = input_helpers.load_features_in_timeseries(dataset, aoi_id, 0, dataset_helpers.include_masked())
+        features_end = input_helpers.load_features_in_timeseries(dataset, aoi_id, -1, dataset_helpers.include_masked())
 
         if self.subset_features:
             features_selection = self._get_feature_selection(features_start, features_end)
@@ -187,8 +87,8 @@ class PostClassificationComparison(ChangeDetectionMethod):
         self.threshold = threshold
         self.ignore_negative_changes = ignore_negative_changes
 
-    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        dates = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
         start_year, start_month, *_ = dates[0]
         end_year, end_month, *_ = dates[-1]
         probs_start = input_helpers.load_input(dataset, aoi_id, start_year, start_month)
@@ -209,7 +109,7 @@ class Thresholding(ChangeDetectionMethod):
         super().__init__('thresholding')
 
     def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
-        dates = dataset_helpers.get_timeseries(dataset, aoi_id)
+        dates = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
         start_date = dates[0][:-1]
         end_date = dates[-1][:-1]
         probs_start = input_helpers.load_input(dataset, aoi_id, *start_date)
@@ -225,7 +125,7 @@ class Thresholding(ChangeDetectionMethod):
 
 class StepFunctionModel(ChangeDatingMethod):
 
-    def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.1, min_segment_length: int = 3,
+    def __init__(self, error_multiplier: int = 3, min_prob_diff: float = 0.2, min_segment_length: int = 2,
                  improve_last: bool = False, improve_first: bool = False, noise_reduction: bool = True):
         super().__init__('stepfunction')
         self.fitted_dataset = None
@@ -242,14 +142,14 @@ class StepFunctionModel(ChangeDatingMethod):
         self.improve_first = improve_first
         self.noise_reduction = noise_reduction
 
-    def _fit(self, dataset: str, aoi_id: str, include_masked_data: bool):
+    def _fit(self, dataset: str, aoi_id: str):
         if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
             return
 
-        timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+        timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
         self.length_ts = len(timeseries)
 
-        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data)
+        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
 
         errors = []
         mean_diffs = []
@@ -310,22 +210,21 @@ class StepFunctionModel(ChangeDatingMethod):
             noise = change_count == 1
             change[noise] = 0
 
-        # self.cached_fit = np.zeros((dataset_helpers.get_yx_size(dataset, aoi_id)), dtype=np.uint8)
         self.cached_fit = np.where(change, best_fit + self.min_segment_length, 0)
 
         self.fitted_dataset = dataset
         self.fitted_aoi = aoi_id
 
-    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        self._fit(dataset, aoi_id, include_masked_data)
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
 
         # convert to change date product to change detection (0 and length_ts is no change)
         change = self.cached_fit != 0
 
         return np.array(change).astype(np.bool)
 
-    def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        self._fit(dataset, aoi_id, include_masked_data)
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
 
         return np.array(self.cached_fit).astype(np.uint8)
 
@@ -334,11 +233,41 @@ class StepFunctionModel(ChangeDatingMethod):
         return la * np.e ** (-la * x)
 
 
-class BackwardsBreakPointDetection(ChangeDatingMethod):
+class SARStepFunctionModel(StepFunctionModel):
+
+    def __init__(self, config_name: str, error_multiplier: int = 2, min_prob_diff: float = 0.2,
+                 min_segment_length: int = 2, improve_last: bool = False, improve_first: bool = False,
+                 noise_reduction: bool = True):
+        super().__init__(error_multiplier, min_prob_diff=min_prob_diff,
+                         min_segment_length=min_segment_length, improve_last=improve_last, improve_first=improve_first,
+                         noise_reduction=noise_reduction)
+        self.name = 'sarstepfunction'
+        self.config_name = config_name
+
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
+
+        # convert to change date product to change detection (0 and length_ts is no change)
+        change = self.cached_fit != 0
+
+        year, month = dataset_helpers.get_date_from_index(-1, dataset, aoi_id, dataset_helpers.include_masked())
+        path = dataset_helpers.dataset_path(dataset) / aoi_id / self.config_name
+        pred_file = path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
+        pred, _, _ = geofiles.read_tif(pred_file)
+        is_bua = np.squeeze(pred) > 0.5
+        change[~is_bua] = 0
+
+        return np.array(change).astype(np.bool)
+
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+        pass
+
+
+class LogisticFunctionModel(ChangeDatingMethod):
 
     def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.1, min_segment_length: int = 3,
-                 improved_final_prediction: bool = True):
-        super().__init__('backwardsbreakpointdetection')
+                 noise_reduction: bool = True):
+        super().__init__('logisticfunction')
         self.fitted_dataset = None
         self.fitted_aoi = None
         # index when changed occurred in the time series
@@ -349,94 +278,97 @@ class BackwardsBreakPointDetection(ChangeDatingMethod):
         self.error_multiplier = error_multiplier
         self.min_prob_diff = min_prob_diff
         self.min_segment_length = min_segment_length
-        self.improved_final_prediction = improved_final_prediction
+        self.noise_reduction = noise_reduction
 
-    def _fit(self, dataset: str, aoi_id: str, include_masked_data: bool):
+    def _fit(self, dataset: str, aoi_id: str):
         if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
             return
 
-        timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+        timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
         self.length_ts = len(timeseries)
 
-        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, include_masked_data)
+        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
 
-        if self.improved_final_prediction:
-            coefficients = self.exponential_distribution(np.arange(self.length_ts))[::-1]
-            probs_cube = probs_cube.transpose((2, 0, 1))
-            probs_cube = coefficients[:, np.newaxis, np.newaxis] * probs_cube
-            probs_exp = np.sum(probs_cube, axis=0)
-            probs_cube[-1, :, :] = probs_exp
-            probs_cube = probs_cube.transpose((1, 2, 0))
+        m, n = dataset_helpers.get_yx_size(dataset, aoi_id)
+        self.cached_fit = np.empty((m, n, 4))
 
-        errors = []
-        mean_diffs = []
+        for i in range(m):
+            for j in range(n):
+                y = probs_cube[i, j, ]
+                x = np.arange(1, self.length_ts + 1)
+                bounds = ([-10, 0, 0, 0], [0, 10, 10, 1])
+                initial_values = [0, 1, 1, 0]
+                try:
+                    popt, pcov = scipy.optimize.curve_fit(self.logistic_function, x, y, p0=initial_values, bounds=bounds)
+                    # x, cov_x = scipy.optimize.leastsq(self.logistic_function, x, y, p0=initial_values, bounds=bounds)
+                    y_fit = self.logistic_function(x, *popt)
+                    self.cached_fit[i, j, ] = popt
+                except RuntimeError:
+                    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+                    ax.plot(x, y, 'o')
+                    ax.set_xlim((0, self.length_ts))
+                    ax.set_ylim((0, 1))
+                    plt.show()
+                fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+                ax.plot(x, y, 'o')
+                ax.plot(x, y_fit, '-')
+                ax.set_xlim((0, self.length_ts))
+                ax.set_ylim((0, 1))
 
-        # compute mse for stable fit
-        mean_prob = np.mean(probs_cube, axis=-1)
-        pred_prob_stable = np.repeat(mean_prob[:, :, np.newaxis], len(timeseries), axis=-1)
-        error_stable = self._mse(probs_cube, pred_prob_stable)
+                a, b, c, d = popt
 
-        pred_last = probs_cube[:, :, -1]
+                text_str = f'a={a:.2f} - b={b:.2f} - c={c:.2f} - d={d:.2f}'
+                ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
 
-        # break point detection
-        for i in range(self.min_segment_length, len(timeseries) - self.min_segment_length):
-            # compute predicted
-            probs_presegment = probs_cube[:, :, :i]
-            mean_prob_presegment = np.mean(probs_presegment, axis=-1)
-            pred_probs_presegment = np.repeat(mean_prob_presegment[:, :, np.newaxis], i, axis=-1)
+                plt.show()
 
-            # maybe use absolute value here
-            mean_diffs.append(prob_last - mean_prob_presegment)
 
-            pred_probs_break = np.concatenate((pred_probs_presegment, pred_probs_postsegment), axis=-1)
-            mse_break = self._mse(probs_cube, pred_probs_break)
-            errors.append(mse_break)
-
-        errors = np.stack(errors, axis=-1)
-        best_fit = np.argmin(errors, axis=-1)
-
-        min_error_break = np.min(errors, axis=-1)
-        change_candidate = min_error_break * self.error_multiplier < error_stable
-
-        mean_diffs = np.stack(mean_diffs, axis=-1)
-        m, n = mean_diffs.shape[:2]
-        mean_diff = mean_diffs[np.arange(m)[:, None], np.arange(n), best_fit]
-        change = np.logical_and(change_candidate, mean_diff > self.min_prob_diff)
-
-        # self.cached_fit = np.zeros((dataset_helpers.get_yx_size(dataset, aoi_id)), dtype=np.uint8)
-        self.cached_fit = np.where(change, best_fit + self.min_segment_length, 0)
+        if self.noise_reduction:
+            kernel = np.ones((3, 3), dtype=np.uint8)
+            change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
+            noise = change_count == 1
+            change[noise] = 0
 
         self.fitted_dataset = dataset
         self.fitted_aoi = aoi_id
 
-    def change_detection(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        self._fit(dataset, aoi_id, include_masked_data)
+    def change_detection(self, dataset: str, aoi_id: str) -> np.ndarray:
+        self._fit(dataset, aoi_id)
 
         # convert to change date product to change detection (0 and length_ts is no change)
         change = self.cached_fit != 0
 
         return np.array(change).astype(np.bool)
 
-    def change_dating(self, dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-        self._fit(dataset, aoi_id, include_masked_data)
+    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+        pass
 
-        return np.array(self.cached_fit).astype(np.uint8)
+    @staticmethod
+    def logistic_function_old(x: float, a: float, b: float, c: float, d: float) -> float:
+        return a / (1. + np.exp(-c * (x - d))) + b
 
-    @ staticmethod
-    def exponential_distribution(x: np.ndarray, la: float = 0.25) -> np.ndarray:
-        return la * np.e ** (-la * x)
-
+    @staticmethod
+    def logistic_function(t: float, a: float, b: float, c: float, d: float) -> float:
+        return a / (1. + np.exp(b * t - c)) + d
 
 
 if __name__ == '__main__':
-    ts_length = 5
-    x_1d = np.random.rand(ts_length)
-    x_3d = np.random.rand(3, 3, ts_length)
+    model = LogisticFunctionModel()
+    change = model.change_detection('spacenet7', 'L15-0566E-1185N_2265_3451_13')
 
-    def change_function(x, x0): return np.piecewise(x, [x < x0, x >= x0], [0., 1.])
+    x = np.arange(1, 21)
+    a = -0.3
+    b = 2
+    c = 20
+    d = 0.5
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    y_fit = model.logistic_function(x, a, b, c, d)
+    ax.plot(x, y_fit, 'o')
+    ax.plot(x, y_fit, '-')
+    ax.set_xlim((1, 20))
+    ax.set_ylim((0, 1))
+    text_str = f'a={a:.2f} - b={b:.2f} - c={c:.2f} - d={d:.2f}'
+    ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
+    bounds = ([-100, 0, 0, 0], [0, 10, 100, 1])
 
-    y_1d = change_function(x_1d, 2)
-    print(y_1d)
-
-    # np.apply_along_axis(my_func, axis=-1, arr=y)
-
+    plt.show()

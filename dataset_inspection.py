@@ -132,6 +132,9 @@ def visualize_timeseries_length(dataset: str):
     plt.show()
 
 
+def produce_timeseries_cube(dataset: str, aoi_id: str, band_index: int):
+    ts = dataset_helpers.get_timeseries()
+
 if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):

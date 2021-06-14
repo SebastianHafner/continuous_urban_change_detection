@@ -32,13 +32,15 @@ def load_input_timeseries(dataset: str, aoi_id: str, include_masked_data: bool =
 
 def load_input(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
     s = dataset_helpers.settings()
-    input = s['INPUT']
-    if input == 'CNN':
+    input_type = s['INPUT']['TYPE']
+    if input_type == 'cnn':
         return load_prediction(dataset, aoi_id, year, month)
-    elif input == 'sentinel1':
-        return load_sentinel1(dataset, aoi_id, year, month, s['INPUT_BAND'])
     else:
-        return load_sentinel2(dataset, aoi_id, year, month, s['INPUT_BAND'])
+        input_band = s['INPUT']['BAND']
+        if input_type == 'sentinel1':
+            return load_sentinel1(dataset, aoi_id, year, month, input_band)
+        else:
+            return load_sentinel2(dataset, aoi_id, year, month, input_band)
 
 
 def load_sentinel1(dataset: str, aoi_id: str, year: int, month: int, band: str):
@@ -89,6 +91,7 @@ def load_features(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarra
     return features
 
 
+# TODO: needs fixing
 def compute_omissions(dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
     pred_cube = load_prediction_timeseries(dataset, aoi_id, include_masked_data)
     pred_cube = pred_cube > 0.5

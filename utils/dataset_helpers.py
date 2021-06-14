@@ -126,7 +126,14 @@ def metadata_timestamp(dataset: str, aoi_id: str, year: int, month: int) -> int:
 
 def config_name() -> str:
     s = settings()
-    return s['CONFIG_NAME']
+    sensor = s['INPUT']['SENSOR']
+    config_name_dict = s['INPUT']['CONFIG_NAME_DICT']
+    if sensor == 'sentinel1':
+        return config_name_dict['sar']
+    elif sensor == 'sentinel2':
+        return config_name_dict['optical']
+    else:
+        return config_name_dict['fusion']
 
 
 def date2index(date: list) -> int:
@@ -138,15 +145,22 @@ def date2index(date: list) -> int:
 # include masked data is only
 def get_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False, ignore_bad_data: bool = True) -> list:
     aoi_md = aoi_metadata(dataset, aoi_id)
+    s = settings()
     if ignore_bad_data:
-        if include_masked_data:
+        input_sensor = s['INPUT']['SENSOR']
+        if input_sensor == 'sentinel1':
+            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1]
+        elif input_sensor == 'sentinel2':
+            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s2]
+        else:
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1 and s2]
+        if include_masked_data:
             # trim time series at beginning and end such that it starts and ends with an unmasked timestamp
             unmasked_indices = [i for i, (_, _, mask, *_) in enumerate(timeseries) if not mask]
             min_unmasked, max_unmasked = min(unmasked_indices), max(unmasked_indices)
             timeseries = timeseries[min_unmasked:max_unmasked + 1]
         else:
-            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if not mask and (s1 and s2)]
+            timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if not mask]
     else:
         timeseries = aoi_md
     return timeseries

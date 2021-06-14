@@ -7,9 +7,14 @@ DATASET_NAMES:
   SPACENET7: 'spacenet7_s1s2_dataset_v3'
   OSCD: 'oscd_s1s2_dataset'
 
-INPUT: 'CNN'
-INPUT_BAND: 'VV'
-CONFIG_NAME: 'sar_jaccardmorelikeloss'
+INPUT:
+  TYPE: 'cnn' # cnn or satellite
+  SENSOR: 'sentinel1' # sentinel1 or sentinel2
+  BAND: 'VV' # see available bands
+  CONFIG_NAME_DICT:
+    sar: 'sar_jaccardmorelikeloss'
+    optical: 'optical_jaccardmorelikeloss'
+    fusion: 'fusionda_cons05_jaccardmorelikeloss'
 
 INCLUDE_MASKED_DATA: True
 
