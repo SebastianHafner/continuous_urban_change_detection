@@ -304,6 +304,7 @@ class LogisticFunctionModel(ChangeDatingMethod):
                     y_fit = self.logistic_function(x, *popt)
                     self.cached_fit[i, j, ] = popt
                 except RuntimeError:
+                    print('run time error')
                     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
                     ax.plot(x, y, 'o')
                     ax.set_xlim((0, self.length_ts))
