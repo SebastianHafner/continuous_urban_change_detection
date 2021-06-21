@@ -1,7 +1,7 @@
 import numpy as np
 from skimage.filters import threshold_otsu, threshold_local
 from abc import ABC, abstractmethod
-from utils import input_helpers, dataset_helpers, geofiles
+from utils import input_helpers, dataset_helpers, geofiles, label_helpers
 import scipy
 import matplotlib.pyplot as plt
 
@@ -288,41 +288,38 @@ class LogisticFunctionModel(ChangeDatingMethod):
         self.length_ts = len(timeseries)
 
         probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
+        change_label = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked())
 
         m, n = dataset_helpers.get_yx_size(dataset, aoi_id)
-        self.cached_fit = np.empty((m, n, 4))
+        self.cached_fit = np.empty((m, n, 3))
 
         for i in range(m):
             for j in range(n):
-                y = probs_cube[i, j, ]
-                x = np.arange(1, self.length_ts + 1)
-                bounds = ([-10, 0, 0, 0], [0, 10, 10, 1])
-                initial_values = [0, 1, 1, 0]
-                try:
-                    popt, pcov = scipy.optimize.curve_fit(self.logistic_function, x, y, p0=initial_values, bounds=bounds)
-                    # x, cov_x = scipy.optimize.leastsq(self.logistic_function, x, y, p0=initial_values, bounds=bounds)
-                    y_fit = self.logistic_function(x, *popt)
-                    self.cached_fit[i, j, ] = popt
-                except RuntimeError:
-                    print('run time error')
+                if change_label[i, j]:
+                    y = probs_cube[i, j, ]
+                    x = np.arange(1, self.length_ts + 1)
+                    param_bounds = ([0, 0, 1], [self.length_ts, 1, 4])
+                    initial_values = [1, 1, 1]
+                    try:
+                        popt, pcov = scipy.optimize.curve_fit(self.logistic_curve, x, y, p0=initial_values,
+                                                              bounds=param_bounds)
+                        y_fit = self.logistic_curve(x, *popt)
+                        self.cached_fit[i, j, ] = popt
+                    except RuntimeError:
+                        continue
+
                     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
                     ax.plot(x, y, 'o')
+                    ax.plot(x, y_fit, '-')
                     ax.set_xlim((0, self.length_ts))
                     ax.set_ylim((0, 1))
+
+                    t0, m, k = popt
+
+                    text_str = f't0={t0:.2f} - m={m:.2f} - k={k:.2f}'
+                    ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
+
                     plt.show()
-                fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-                ax.plot(x, y, 'o')
-                ax.plot(x, y_fit, '-')
-                ax.set_xlim((0, self.length_ts))
-                ax.set_ylim((0, 1))
-
-                a, b, c, d = popt
-
-                text_str = f'a={a:.2f} - b={b:.2f} - c={c:.2f} - d={d:.2f}'
-                ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
-
-                plt.show()
-
 
         if self.noise_reduction:
             kernel = np.ones((3, 3), dtype=np.uint8)
@@ -345,31 +342,10 @@ class LogisticFunctionModel(ChangeDatingMethod):
         pass
 
     @staticmethod
-    def logistic_function_old(x: float, a: float, b: float, c: float, d: float) -> float:
-        return a / (1. + np.exp(-c * (x - d))) + b
-
-    @staticmethod
-    def logistic_function(t: float, a: float, b: float, c: float, d: float) -> float:
-        return a / (1. + np.exp(b * t - c)) + d
+    def logistic_curve(t: float, t0: float, m: float, k: float):
+        return m / (1 + np.exp(-k * (t - t0)))
 
 
 if __name__ == '__main__':
     model = LogisticFunctionModel()
     change = model.change_detection('spacenet7', 'L15-0566E-1185N_2265_3451_13')
-
-    x = np.arange(1, 21)
-    a = -0.3
-    b = 2
-    c = 20
-    d = 0.5
-    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-    y_fit = model.logistic_function(x, a, b, c, d)
-    ax.plot(x, y_fit, 'o')
-    ax.plot(x, y_fit, '-')
-    ax.set_xlim((1, 20))
-    ax.set_ylim((0, 1))
-    text_str = f'a={a:.2f} - b={b:.2f} - c={c:.2f} - d={d:.2f}'
-    ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
-    bounds = ([-100, 0, 0, 0], [0, 10, 100, 1])
-
-    plt.show()
