@@ -3,31 +3,11 @@ from utils import geofiles, dataset_helpers, label_helpers
 import numpy as np
 
 
-def load_input_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
-                          ts_extension: int = 0) -> np.ndarray:
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
-
-    yx_shape = dataset_helpers.get_yx_size(dataset, aoi_id)
-    n = len(dates)
-    pred_ts = np.zeros((*yx_shape, n + 2 * ts_extension), dtype=np.float32)
-
-    # fill in time series value
-    for i, (year, month, *_) in enumerate(dates):
-        pred = load_input(dataset, aoi_id, year, month)
-        pred_ts[:, :, i + ts_extension] = pred
-
-    # padd start and end
-    if ts_extension != 0:
-        start_pred = pred_ts[:, :, ts_extension]
-        start_extension = np.repeat(start_pred[:, :, np.newaxis], ts_extension, axis=2)
-        pred_ts[:, :, :ts_extension] = start_extension
-
-        end_index = ts_extension + n - 1
-        end_pred = pred_ts[:, :, end_index]
-        end_extension = np.repeat(end_pred[:, :, np.newaxis], ts_extension, axis=2)
-        pred_ts[:, :, end_index + 1:] = end_extension
-
-    return pred_ts
+def input_name() -> str:
+    s = dataset_helpers.settings()
+    input_type = s['INPUT']['TYPE']
+    input_sensor = s['INPUT']['SENSOR']
+    return f'{input_type}_{input_sensor}'
 
 
 def load_input(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
@@ -36,8 +16,9 @@ def load_input(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
     if input_type == 'cnn':
         return load_prediction(dataset, aoi_id, year, month)
     else:
+        input_sensor = s['INPUT']['SENSOR']
         input_band = s['INPUT']['BAND']
-        if input_type == 'sentinel1':
+        if input_sensor == 'sentinel1':
             return load_sentinel1(dataset, aoi_id, year, month, input_band)
         else:
             return load_sentinel2(dataset, aoi_id, year, month, input_band)
@@ -67,6 +48,33 @@ def load_prediction(dataset: str, aoi_id: str, year: int, month: int) -> np.ndar
     pred, _, _ = geofiles.read_tif(pred_file)
     pred = np.squeeze(pred)
     return pred
+
+
+def load_input_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
+                          ts_extension: int = 0) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+
+    yx_shape = dataset_helpers.get_yx_size(dataset, aoi_id)
+    n = len(dates)
+    pred_ts = np.zeros((*yx_shape, n + 2 * ts_extension), dtype=np.float32)
+
+    # fill in time series value
+    for i, (year, month, *_) in enumerate(dates):
+        pred = load_input(dataset, aoi_id, year, month)
+        pred_ts[:, :, i + ts_extension] = pred
+
+    # padd start and end
+    if ts_extension != 0:
+        start_pred = pred_ts[:, :, ts_extension]
+        start_extension = np.repeat(start_pred[:, :, np.newaxis], ts_extension, axis=2)
+        pred_ts[:, :, :ts_extension] = start_extension
+
+        end_index = ts_extension + n - 1
+        end_pred = pred_ts[:, :, end_index]
+        end_extension = np.repeat(end_pred[:, :, np.newaxis], ts_extension, axis=2)
+        pred_ts[:, :, end_index + 1:] = end_extension
+
+    return pred_ts
 
 
 def load_input_in_timeseries(dataset: str, aoi_id: str, index: int, include_masked_data: bool,

@@ -1,5 +1,6 @@
 from pathlib import Path
 from utils import geofiles, visualization, dataset_helpers, prediction_helpers, label_helpers, metrics, mask_helpers
+from utils import input_helpers
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -132,15 +133,22 @@ def visualize_timeseries_length(dataset: str):
     plt.show()
 
 
-def produce_timeseries_cube(dataset: str, aoi_id: str, band_index: int):
-    ts = dataset_helpers.get_timeseries()
+def produce_timeseries_cube(dataset: str, aoi_id: str):
+    probs = input_helpers.load_input_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
+    probs = (probs * 100).astype(np.uint8)
+    transform, crs = dataset_helpers.get_geo(dataset, aoi_id)
+    input_name = input_helpers.input_name()
+    file = dataset_helpers.root_path() / 'inspection' / f'{input_name}_{aoi_id}.tif'
+    geofiles.write_tif(file, probs, transform, crs)
+
 
 if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
-        visualize_all_data(ds, aoi_id, save_plot=True)
+        # visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
+        produce_timeseries_cube(ds, aoi_id)
         pass
 
     # visualize_timeseries_length(ds)
