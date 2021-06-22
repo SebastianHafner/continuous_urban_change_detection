@@ -291,7 +291,7 @@ class LogisticFunctionModel(ChangeDatingMethod):
         change_label = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked())
 
         m, n = dataset_helpers.get_yx_size(dataset, aoi_id)
-        self.cached_fit = np.empty((m, n, 3))
+        self.cached_fit = np.zeros((m, n, 3), dtype=np.float)
 
         for i in range(m):
             for j in range(n):
@@ -320,6 +320,18 @@ class LogisticFunctionModel(ChangeDatingMethod):
                     ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
 
                     plt.show()
+
+
+        t0, m, k = self.cached_fit[:, :, 0], self.cached_fit[:, :, 1], self.cached_fit[:, :, 2]
+
+        # compute min values
+        t = np.full((m, n), fill_value=0)
+        min_value = self.logistic_curve(t, t0, m, k)
+
+        t = np.full((m, n), fill_value=self.length_ts)
+        max_value = self.logistic_curve(t, t0, m, k)
+
+        increase = max_value - min_value
 
         if self.noise_reduction:
             kernel = np.ones((3, 3), dtype=np.uint8)
