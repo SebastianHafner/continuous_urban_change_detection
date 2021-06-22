@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from utils import input_helpers, dataset_helpers, geofiles, label_helpers
 import scipy
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 class ChangeDetectionMethod(ABC):
@@ -265,19 +266,17 @@ class SARStepFunctionModel(StepFunctionModel):
 
 class LogisticFunctionModel(ChangeDatingMethod):
 
-    def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.1, min_segment_length: int = 3,
-                 noise_reduction: bool = True):
+    def __init__(self, min_prob_diff: float = 0.1, noise_reduction: bool = True):
         super().__init__('logisticfunction')
         self.fitted_dataset = None
         self.fitted_aoi = None
         # index when changed occurred in the time series
         # (no change is index 0 and length_ts for non-urban and urban, respectively)
-        self.cached_fit = None
+        self.params = None
+        self.change_magnitude = None
         self.length_ts = None
 
-        self.error_multiplier = error_multiplier
         self.min_prob_diff = min_prob_diff
-        self.min_segment_length = min_segment_length
         self.noise_reduction = noise_reduction
 
     def _fit(self, dataset: str, aoi_id: str):
@@ -291,53 +290,56 @@ class LogisticFunctionModel(ChangeDatingMethod):
         change_label = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked())
 
         m, n = dataset_helpers.get_yx_size(dataset, aoi_id)
-        self.cached_fit = np.zeros((m, n, 3), dtype=np.float)
+        params = np.zeros((m, n, 3), dtype=np.float)
 
-        for i in range(m):
+        for i in tqdm(range(m)):
             for j in range(n):
-                if change_label[i, j]:
-                    y = probs_cube[i, j, ]
-                    x = np.arange(1, self.length_ts + 1)
-                    param_bounds = ([0, 0, 1], [self.length_ts, 1, 4])
-                    initial_values = [1, 1, 1]
-                    try:
-                        popt, pcov = scipy.optimize.curve_fit(self.logistic_curve, x, y, p0=initial_values,
-                                                              bounds=param_bounds)
-                        y_fit = self.logistic_curve(x, *popt)
-                        self.cached_fit[i, j, ] = popt
-                    except RuntimeError:
-                        continue
+                y = probs_cube[i, j, ]
+                x = np.arange(1, self.length_ts + 1)
+                param_bounds = ([0, 0, 1], [self.length_ts, 1, 4])
+                initial_values = [1, 1, 1]
+                try:
+                    popt, pcov = scipy.optimize.curve_fit(self.logistic_curve, x, y, p0=initial_values,
+                                                          bounds=param_bounds)
+                    # y_fit = self.logistic_curve(x, *popt)
+                    params[i, j, ] = popt
+                except RuntimeError:
+                    continue
 
-                    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-                    ax.plot(x, y, 'o')
-                    ax.plot(x, y_fit, '-')
-                    ax.set_xlim((0, self.length_ts))
-                    ax.set_ylim((0, 1))
+                # fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+                # ax.plot(x, y, 'o')
+                # ax.plot(x, y_fit, '-')
+                # ax.set_xlim((0, self.length_ts))
+                # ax.set_ylim((0, 1))
+                #
+                # t0, m, k = popt
+                #
+                # text_str = f't0={t0:.2f} - m={m:.2f} - k={k:.2f}'
+                # ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
+                #
+                # plt.show()
 
-                    t0, m, k = popt
 
-                    text_str = f't0={t0:.2f} - m={m:.2f} - k={k:.2f}'
-                    ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=14, verticalalignment='top')
-
-                    plt.show()
-
-
-        t0, m, k = self.cached_fit[:, :, 0], self.cached_fit[:, :, 1], self.cached_fit[:, :, 2]
+        self.params = {
+            't0': params[:, :, 0],
+            'm': params[:, :, 1],
+            'k': params[:, :, 2]
+        }
 
         # compute min values
-        t = np.full((m, n), fill_value=0)
-        min_value = self.logistic_curve(t, t0, m, k)
+        t = np.full((m, n), fill_value=0., dtype=np.float)
+        min_value = self.logistic_curve(t, **self.params)
 
-        t = np.full((m, n), fill_value=self.length_ts)
-        max_value = self.logistic_curve(t, t0, m, k)
+        t = np.full((m, n), fill_value=self.length_ts, dtype=np.float)
+        max_value = self.logistic_curve(t, **self.params)
 
-        increase = max_value - min_value
+        self.change_magnitude = max_value - min_value
 
-        if self.noise_reduction:
-            kernel = np.ones((3, 3), dtype=np.uint8)
-            change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
-            noise = change_count == 1
-            change[noise] = 0
+        # if self.noise_reduction:
+        #     kernel = np.ones((3, 3), dtype=np.uint8)
+        #     change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
+        #     noise = change_count == 1
+        #     change[noise] = 0
 
         self.fitted_dataset = dataset
         self.fitted_aoi = aoi_id
@@ -346,7 +348,7 @@ class LogisticFunctionModel(ChangeDatingMethod):
         self._fit(dataset, aoi_id)
 
         # convert to change date product to change detection (0 and length_ts is no change)
-        change = self.cached_fit != 0
+        change = self.change_magnitude > self.min_prob_diff
 
         return np.array(change).astype(np.bool)
 

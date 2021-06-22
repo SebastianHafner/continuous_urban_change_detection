@@ -92,7 +92,8 @@ if __name__ == '__main__':
     sf = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
     sarsf = cd_models.SARStepFunctionModel(config_name='fusionda_cons05_jaccardmorelikeloss', error_multiplier=2,
                                            min_prob_diff=0.1)
-    model = sf
+    logm = cd_models.LogisticFunctionModel(min_prob_diff=0.2)
+    model = logm
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
         qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel1')
         # quantitative_testing(model, ds, aoi_id)
