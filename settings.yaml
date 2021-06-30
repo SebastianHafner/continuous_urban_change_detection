@@ -12,7 +12,7 @@ INPUT:
   SENSOR: 'sentinel1' # sentinel1 or sentinel2
   BAND: 'VV' # see available bands
   CONFIG_NAME_DICT:
-    sar: 'sar_jaccardmorelikeloss'
+    sar: 'base_sar_cucd'
     optical: 'optical_jaccardmorelikeloss'
     fusion: 'fusionda_cons05_jaccardmorelikeloss'
 

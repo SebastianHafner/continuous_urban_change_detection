@@ -12,6 +12,16 @@ def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
     return label
 
 
+def load_raw_label(aoi_id: str, year: int, month: int) -> np.ndarray:
+    buildings_path = dataset_helpers.dataset_path('spacenet7') / aoi_id / 'buildings'
+    label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
+    label, _, _ = geofiles.read_tif(label_file)
+    label = np.squeeze(label).astype(np.float)
+    mask = mask_helpers.load_mask('spacenet7', aoi_id, year, month)
+    label = np.where(~mask, label, np.NaN)
+    return label
+
+
 def load_label_in_timeseries(aoi_id: str, index: int, include_masked_data: bool,
                              ignore_bad_data: bool = True) -> np.ndarray:
     dates = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data, ignore_bad_data)

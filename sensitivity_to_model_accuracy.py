@@ -8,8 +8,7 @@ FONTSIZE = 20
 
 
 # supported modes: first_last, all
-def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include_masked_data: bool = False,
-                      save_plot: bool = False):
+def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, save_plot: bool = False):
 
     f1_scores_extraction = []
     f1_scores_change = []
@@ -18,7 +17,7 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
 
         # compute average urban extraction f1 score
         f1_scores_ts = []
-        ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data)
+        ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
         if mode == 'first_last':
             ts = [ts[0], ts[-1]]
         for year, month, *_ in ts:
@@ -29,8 +28,8 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
         f1_scores_extraction.append(np.mean(f1_scores_ts))
 
         # compute change f1 score
-        pred_change = model.change_detection('spacenet7', aoi_id, include_masked_data)
-        label_change = label_helpers.generate_change_label('spacenet7', aoi_id, include_masked_data)
+        pred_change = model.change_detection('spacenet7', aoi_id)
+        label_change = label_helpers.generate_change_label('spacenet7', aoi_id, dataset_helpers.include_masked())
         f1_scores_change.append(metrics.compute_f1_score(pred_change, label_change))
 
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -103,6 +102,6 @@ def sensitivity_to_omissions(model: cd_models.ChangeDetectionMethod, include_mas
 if __name__ == '__main__':
 
     pcc = cd_models.PostClassificationComparison()
-    stepfunction = cd_models.StepFunctionModel(n_stable=6)
-    sensitivity_to_f1(stepfunction, 'all', True, save_plot=False)
+    sf = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
+    sensitivity_to_f1(sf, 'all', save_plot=False)
     # sensitivity_to_omissions(stepfunction, True, save_plot=False)

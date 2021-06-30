@@ -86,7 +86,9 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
         plt.show()
     else:
         dataset_name = dataset_helpers.dataset_name(dataset)
-        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset_name / f'{aoi_id}_data.png'
+        config_name = dataset_helpers.config_name()
+        output_path = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset_name / config_name
+        output_file = output_path / f'{aoi_id}_data.png'
         output_file.parent.mkdir(exist_ok=True)
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
@@ -146,9 +148,9 @@ if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
-        # visualize_all_data(ds, aoi_id, save_plot=True)
+        visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
-        produce_timeseries_cube(ds, aoi_id)
+        # produce_timeseries_cube(ds, aoi_id)
         pass
 
     # visualize_timeseries_length(ds)
