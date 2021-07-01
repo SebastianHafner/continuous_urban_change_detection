@@ -1,5 +1,5 @@
 import numpy as np
-from utils import dataset_helpers, prediction_helpers, label_helpers, metrics, mask_helpers
+from utils import dataset_helpers, label_helpers, input_helpers, metrics, mask_helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -10,7 +10,7 @@ def run_urban_extractor_evaluation(config_name: str, aoi_id: str, include_masked
 
     for i in range(length_ts):
         label = label_helpers.load_label_in_timeseries(aoi_id, i)
-        pred = prediction_helpers.load_prediction_in_timeseries(config_name, 'spacenet7_s1s2_dataset', aoi_id, i)
+        pred = input_helpers.load_prediction_in_timeseries(config_name, 'spacenet7_s1s2_dataset', aoi_id, i)
         pred = pred > 0.5
         f1_scores.append(metrics.compute_f1_score(pred, label))
         precisions.append(metrics.compute_precision(pred, label))
@@ -37,7 +37,7 @@ def show_precision_recall_evaluation(config_name: str):
 
         for i in range(length_ts):
             label = label_helpers.load_label_in_timeseries(aoi_id, i)
-            pred = prediction_helpers.load_prediction_in_timeseries(config_name, aoi_id, i)
+            pred = input_helpers.load_prediction_in_timeseries(config_name, aoi_id, i)
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
             precisions.append(metrics.compute_precision(pred, label))
@@ -84,7 +84,7 @@ def show_f1_evaluation(sort_by_performance: bool = False):
             if mask_helpers.is_fully_masked('spacenet7', aoi_id, year, month):
                 continue
             label = label_helpers.load_label_in_timeseries(aoi_id, i, dataset_helpers.include_masked())
-            pred = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i,
+            pred = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i,
                                                                     dataset_helpers.include_masked())
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
@@ -117,7 +117,7 @@ def test_last_prediction_improvement():
     for aoi_id in tqdm(dataset_helpers.get_aoi_ids('spacenet7')):
 
         n = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
-        pred_cube = prediction_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        pred_cube = input_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
 
         def exponential_distribution(x: np.ndarray, la: float = 0.25) -> np.ndarray:
             return la * np.e ** (-la * x)
@@ -134,7 +134,7 @@ def test_last_prediction_improvement():
         pred_exp = pred_exp > 0.5
         preds_exp.append(pred_exp.flatten())
 
-        pred_ref = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
+        pred_ref = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
                                                                     dataset_helpers.include_masked())
         pred_ref = pred_ref > 0.5
         preds_ref.append(pred_ref.flatten())
@@ -160,12 +160,12 @@ def plot_last_prediction_improvement():
     for i, aoi_id in enumerate(tqdm(aoi_ids)):
 
         n = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
-        pred_cube = prediction_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        pred_cube = input_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
         pred_cube = pred_cube.transpose((2, 0, 1))
 
         label = label_helpers.load_label_in_timeseries(aoi_id, -1, dataset_helpers.include_masked())
 
-        pred_ref = prediction_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
+        pred_ref = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
                                                                     dataset_helpers.include_masked())
         pred_ref = pred_ref > 0.5
         f1s_ref.append(metrics.compute_f1_score(pred_ref.flatten(), label.flatten()))
@@ -208,8 +208,6 @@ if __name__ == '__main__':
         # run_urban_extractor_evaluation(config_name, aoi_id)
 
         pass
-
-
 
     show_f1_evaluation(sort_by_performance=False)
 

@@ -9,10 +9,10 @@ DATASET_NAMES:
 
 INPUT:
   TYPE: 'cnn' # cnn or satellite
-  SENSOR: 'sentinel1' # sentinel1 or sentinel2
+  SENSOR: 'fusion' # sentinel1 or sentinel2 or fusion
   BAND: 'VV' # see available bands
   CONFIG_NAME_DICT:
-    sar: 'base_sar_cucd'
+    sar: 'sar_jaccardmorelikeloss'
     optical: 'optical_jaccardmorelikeloss'
     fusion: 'fusionda_cons05_jaccardmorelikeloss'
 

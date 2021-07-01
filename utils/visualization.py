@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from utils import geofiles, dataset_helpers, label_helpers, prediction_helpers, mask_helpers
+from utils import geofiles, dataset_helpers, label_helpers, mask_helpers, input_helpers
 import numpy as np
 from pathlib import Path
 from matplotlib import cm
@@ -155,9 +155,9 @@ def plot_change_confidence(ax, change: np.ndarray, confidence: np.ndarray, cmap:
 def plot_prediction(ax, dataset: str, aoi_id: str, year: int, month: int):
     ax.set_xticks([])
     ax.set_yticks([])
-    if not prediction_helpers.prediction_is_available(dataset, aoi_id, year, month):
+    if not input_helpers.prediction_is_available(dataset, aoi_id, year, month):
         return
-    pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
+    pred = input_helpers.load_prediction(dataset, aoi_id, year, month)
     ax.imshow(pred.clip(0, 1), cmap='gray')
 
 

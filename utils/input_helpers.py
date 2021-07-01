@@ -50,6 +50,20 @@ def load_prediction(dataset: str, aoi_id: str, year: int, month: int) -> np.ndar
     return pred
 
 
+def load_prediction_in_timeseries(dataset: str, aoi_id: str, index: int, include_masked_data: bool,
+                                  ignore_bad_data: bool = True) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data, ignore_bad_data)
+    year, month, *_ = dates[index]
+    pred = load_prediction(dataset, aoi_id, year, month)
+    return pred
+
+
+def prediction_is_available(dataset: str, aoi_id: str, year: int, month: int) -> bool:
+    path = dataset_helpers.dataset_path(dataset) / aoi_id / dataset_helpers.config_name()
+    pred_file = path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
+    return pred_file.exists()
+
+
 def load_input_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
                           ts_extension: int = 0) -> np.ndarray:
     dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
@@ -99,14 +113,21 @@ def load_features(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarra
     return features
 
 
-# TODO: needs fixing
-def compute_omissions(dataset: str, aoi_id: str, include_masked_data: bool = False) -> np.ndarray:
-    pred_cube = load_prediction_timeseries(dataset, aoi_id, include_masked_data)
-    pred_cube = pred_cube > 0.5
-    detected = np.any(pred_cube, axis=-1)
-    label_end = label_helpers.load_label_in_timeseries(aoi_id, -1, include_masked_data)
-    omissions = np.logical_and(~detected, label_end)
-    return omissions
+def load_satellite_timeseries(dataset: str, aoi_id: str, satellite: str, band: str):
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
+
+    yx_shape = dataset_helpers.get_yx_size(dataset, aoi_id)
+    data = np.zeros((*yx_shape, len(dates)), dtype=np.float32)
+
+    # fill in time series value
+    for i, (year, month, *_) in enumerate(dates):
+        if satellite == 'sentinel1':
+            img = load_sentinel1(dataset, aoi_id, year, month, band)
+        else:
+            img = load_sentinel2(dataset, aoi_id, year, month, band)
+        data[:, :, i] = img
+
+    return data
 
 
 if __name__ == '__main__':

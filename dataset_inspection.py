@@ -1,5 +1,5 @@
 from pathlib import Path
-from utils import geofiles, visualization, dataset_helpers, prediction_helpers, label_helpers, metrics, mask_helpers
+from utils import geofiles, visualization, dataset_helpers, label_helpers, metrics, mask_helpers
 from utils import input_helpers
 import matplotlib.pyplot as plt
 import numpy as np
@@ -68,12 +68,12 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
                 color = 'red'
         if gt_available:
             fully_masked = mask_helpers.is_fully_masked(dataset, aoi_id, year, month)
-            prediction_available = prediction_helpers.prediction_is_available(dataset, aoi_id, year, month)
+            prediction_available = input_helpers.prediction_is_available(dataset, aoi_id, year, month)
             if fully_masked or not prediction_available:
                 f1 = 'NaN'
             else:
                 y_true = label_helpers.load_label(aoi_id, year, month)
-                y_pred = prediction_helpers.load_prediction(dataset, aoi_id, year, month)
+                y_pred = input_helpers.load_prediction(dataset, aoi_id, year, month)
                 y_pred = y_pred > 0.5
                 f1 = metrics.compute_f1_score(y_pred.flatten(), y_true.flatten())
                 f1 = f'{f1*100:.1f}'
@@ -94,7 +94,7 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
     plt.close(fig)
 
 
-def visualize_timeseries_length(dataset: str):
+def visualize_timeseries_length(dataset: str, sort_by_length: bool = False):
     data, labels = [], []
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
     for aoi_id in tqdm(aoi_ids):
@@ -106,7 +106,8 @@ def visualize_timeseries_length(dataset: str):
         data.append([n_clear, n_clear_masked])
         labels.append(aoi_id)
 
-    data = sorted(data, key=lambda d: d[0])
+    if sort_by_length:
+        data = sorted(data, key=lambda d: d[0])
     clear = [d[0] for d in data]
     clear_masked = [d[1] for d in data]
     labels = [aoi_id[4:15] for aoi_id in labels]
@@ -135,7 +136,7 @@ def visualize_timeseries_length(dataset: str):
     plt.show()
 
 
-def produce_timeseries_cube(dataset: str, aoi_id: str):
+def produce_cnn_timeseries_cube(dataset: str, aoi_id: str):
     probs = input_helpers.load_input_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
     probs = (probs * 100).astype(np.uint8)
     transform, crs = dataset_helpers.get_geo(dataset, aoi_id)
@@ -144,13 +145,34 @@ def produce_timeseries_cube(dataset: str, aoi_id: str):
     geofiles.write_tif(file, probs, transform, crs)
 
 
+def produce_satellite_timeseries_cube(dataset: str, aoi_id: str, satellite: str, band: str):
+    data = input_helpers.load_satellite_timeseries(dataset, aoi_id, satellite, band)
+    transform, crs = dataset_helpers.get_geo(dataset, aoi_id)
+    data_name = f'{satellite}_{band}'
+    save_path = dataset_helpers.root_path() / 'inspection' / data_name
+    save_path.mkdir(exist_ok=True)
+    file = save_path / f'{data_name}_{aoi_id}.tif'
+    geofiles.write_tif(file, data.astype(np.float32), transform, crs)
+
+
+def produce_change_date_label(dataset: str, aoi_id: str):
+    change_date = label_helpers.generate_change_date_label(aoi_id, dataset_helpers.include_masked())
+    transform, crs = dataset_helpers.get_geo(dataset, aoi_id)
+    save_path = dataset_helpers.root_path() / 'inspection' / 'change_date'
+    save_path.mkdir(exist_ok=True)
+    file = save_path / f'change_date_{aoi_id}.tif'
+    geofiles.write_tif(file, change_date.astype(np.uint8), transform, crs)
+
+
 if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
+        # produce_satellite_timeseries_cube(ds, aoi_id, 'sentinel1', 'VV')
+        # produce_change_date_label(ds, aoi_id)
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
-        visualize_all_data(ds, aoi_id, save_plot=True)
+        # visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         # produce_timeseries_cube(ds, aoi_id)
         pass
 
-    # visualize_timeseries_length(ds)
+    visualize_timeseries_length(ds)
