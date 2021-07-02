@@ -97,12 +97,12 @@ if __name__ == '__main__':
     model = sf
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(ds))):
         if dataset_helpers.length_timeseries(ds, aoi_id, dataset_helpers.include_masked()) > 6:
-            # qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel1')
+            qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel2')
             # quantitative_testing(model, ds, aoi_id)
             pass
 
     # qualitative_testing(model, ds, 'L15-0566E-1185N_2265_3451_13', save_plot=False)
 
-    quantitative_testing_dataset(model, ds)
+    # quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
 

@@ -97,12 +97,20 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
 def visualize_timeseries_length(dataset: str, sort_by_length: bool = False):
     data, labels = [], []
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
+    sensor = dataset_helpers.settings()['INPUT']['SENSOR']
     for aoi_id in tqdm(aoi_ids):
         if aoi_id in dataset_helpers.missing_aois():
             continue
         metadata = dataset_helpers.metadata(dataset)['aois'][aoi_id]
-        n_clear = len([_ for _, _, mask, s1, s2 in metadata if not mask and (s1 and s2)])
-        n_clear_masked = len([_ for _, _, mask, s1, s2 in metadata if mask and (s1 and s2)])
+        if sensor == 'sentinel1':
+            metadata = [mask for _, _, mask, s1, s2 in metadata if s1]
+        elif sensor == 'sentinel2':
+            metadata = [mask for _, _, mask, s1, s2 in metadata if s2]
+        else:
+            metadata = [mask for _, _, mask, s1, s2 in metadata if s1 and s2]
+
+        n_clear = len([mask for mask in metadata if not mask])
+        n_clear_masked = len([mask for mask in metadata if mask])
         data.append([n_clear, n_clear_masked])
         labels.append(aoi_id)
 
