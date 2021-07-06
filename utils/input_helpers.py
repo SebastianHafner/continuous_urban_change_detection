@@ -42,11 +42,16 @@ def load_sentinel2(dataset: str, aoi_id: str, year: int, month: int, band: str):
     return img
 
 
-def load_prediction(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
-    path = dataset_helpers.dataset_path(dataset) / aoi_id / dataset_helpers.config_name()
+def load_prediction_raw(dataset: str, aoi_id: str, year: int, month: int, config_name: str) -> np.ndarray:
+    path = dataset_helpers.dataset_path(dataset) / aoi_id / config_name
     pred_file = path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
     pred, _, _ = geofiles.read_tif(pred_file)
     pred = np.squeeze(pred)
+    return pred
+
+
+def load_prediction(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
+    pred = load_prediction_raw(dataset, aoi_id, year, month, dataset_helpers.config_name())
     return pred
 
 

@@ -175,6 +175,10 @@ def produce_change_date_label(dataset: str, aoi_id: str):
     geofiles.write_tif(file, change_date.astype(np.uint8), transform, crs)
 
 
+def study_site_mosaic(dataset: str, satellite: str, dim=(3, 4)):
+    aoi_ids = dataset_helpers.get_aoi_ids(dataset)
+    assert(dim[0] * dim[1] == len(aoi_ids))
+
 if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
