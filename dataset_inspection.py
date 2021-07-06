@@ -94,7 +94,7 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
     plt.close(fig)
 
 
-def visualize_timeseries_length(dataset: str, sort_by_length: bool = False):
+def visualize_timeseries_length(dataset: str, sort_by_length: bool = False, numeric_names: bool = False):
     data, labels = [], []
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
     sensor = dataset_helpers.settings()['INPUT']['SENSOR']
@@ -118,28 +118,31 @@ def visualize_timeseries_length(dataset: str, sort_by_length: bool = False):
         data = sorted(data, key=lambda d: d[0])
     clear = [d[0] for d in data]
     clear_masked = [d[1] for d in data]
-    labels = [aoi_id[4:15] for aoi_id in labels]
+    if numeric_names:
+        labels = [f'AOI {i + 1}' for i in range(len(labels))]
+    else:
+        labels = [aoi_id[4:15] for aoi_id in labels]
     print(data, labels)
     width = 0.5  # the width of the bars: can also be len(x) sequence
 
     fontsize = 20
-    fig, ax = plt.subplots(1, 1, figsize=(len(labels) / 2, 10))
+    fig, ax = plt.subplots(1, 1, figsize=(len(labels) / 2, 6))
 
-    ax.bar(labels, clear, width, label='Clear')
-    ax.bar(labels, clear_masked, width, bottom=clear, label='Clear (masked)')
+    ax.bar(labels, clear, width, label='Unmasked')
+    ax.bar(labels, clear_masked, width, bottom=clear, label='Masked')
 
     ax.set_xticks(np.arange(len(labels)))
     ax.set_xticklabels(labels, rotation=90, fontsize=fontsize)
-    ax.set_xlim((-0.5, len(labels) + 0.5))
+    ax.set_xlim((-0.5, len(labels) - 0.5))
 
     max_value = (max([c + cm for c, cm in data]) // 5 + 1) * 5
     y_ticks = np.arange(0, max_value + 1, 5)
     ax.set_ylim((0, max_value))
     ax.set_yticks(y_ticks)
     ax.set_yticklabels([f'{y_tick:.0f}' for y_tick in y_ticks], fontsize=fontsize)
-    ax.set_ylabel('n Timestamps', fontsize=fontsize)
+    ax.set_ylabel('Timeseries length', fontsize=fontsize)
 
-    ax.legend(loc='upper left', fontsize=fontsize)
+    ax.legend(ncol=2, handletextpad=0.4, columnspacing=1.2, frameon=False, loc='upper center', fontsize=fontsize)
 
     plt.show()
 
@@ -183,4 +186,4 @@ if __name__ == '__main__':
         # produce_timeseries_cube(ds, aoi_id)
         pass
 
-    visualize_timeseries_length(ds)
+    visualize_timeseries_length(ds, numeric_names=True)
