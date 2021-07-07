@@ -175,21 +175,25 @@ def produce_change_date_label(dataset: str, aoi_id: str):
     geofiles.write_tif(file, change_date.astype(np.uint8), transform, crs)
 
 
-def study_site_mosaic(dataset: str, satellite: str, dim: tuple = (3, 4)):
+def study_site_mosaic(dataset: str, satellite: str, dim: tuple = (4, 3)):
     rows, cols = dim
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
     assert(rows * cols == len(aoi_ids))
 
     plot_size = 3
-    fig, axs = plt.subplots(*dim, figsize=(dim[0] * plot_size, dim[1] * plot_size))
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * plot_size, rows * plot_size))
 
     for index, aoi_id in enumerate(aoi_ids):
-        i_row = index %
-        year, month = dataset_helpers.get_date_from_index(-1, dataset, aoi_id, dataset_helpers.include_masked())
+        ax = axs[index // cols, index % cols]
+        year, month = dataset_helpers.get_date_from_index(0, dataset, aoi_id, dataset_helpers.include_masked())
         if satellite == 'sentinel1':
             visualization.plot_sar(ax, dataset, aoi_id, year, month)
         else:
             visualization.plot_optical(ax, dataset, aoi_id, year, month)
+        ax.set_title(f'AOI {index + 1}', fontsize=16)
+
+    file = dataset_helpers.root_path() / 'plots' / 'inspection' / 'study_sites_mosaic.png'
+    plt.savefig(file, dpi=300, bbox_inches='tight')
     plt.show()
 
 
@@ -199,10 +203,10 @@ if __name__ == '__main__':
         # produce_satellite_timeseries_cube(ds, aoi_id, 'sentinel1', 'VV')
         # produce_change_date_label(ds, aoi_id)
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
-        # visualize_all_data(ds, aoi_id, save_plot=True)
+        visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         # produce_timeseries_cube(ds, aoi_id)
         pass
 
-    study_site_mosaic(ds, 'sentinel2', dim=(3, 4))
+    # study_site_mosaic(ds, 'sentinel2')
     # visualize_timeseries_length(ds, numeric_names=True)

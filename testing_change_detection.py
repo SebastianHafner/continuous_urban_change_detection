@@ -83,6 +83,10 @@ def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod, dataset
     print(f'F1: {f1:.3f} - P: {precision:.3f} - R: {recall:.3f}')
 
 
+def run_change_detection_inference(model: cd_models.ChangeDetectionMethod, dataset: str):
+    pass
+
+
 if __name__ == '__main__':
     ds = 'spacenet7'
 

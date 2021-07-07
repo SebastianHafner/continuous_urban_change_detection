@@ -14,7 +14,7 @@ def timeseries_length_comparison(dataset: str, numeric_names: bool = False):
         labels.append(aoi_id)
 
     if numeric_names:
-        labels = [f'AOI {i + 1}' for i in range(len(labels))]
+        labels = [f'{i + 1}' for i in range(len(labels))]
     else:
         labels = [aoi_id[4:15] for aoi_id in labels]
     width = 0.2
@@ -26,11 +26,12 @@ def timeseries_length_comparison(dataset: str, numeric_names: bool = False):
     center_pos = np.arange(len(aoi_ids))
     offset = (width + inbetween_space) / 2
     ax.bar(center_pos - offset, n_clear_sar, width, label='S1', color='#1f77b4')
-    ax.bar(center_pos + offset, n_clear_fusion, width, label='S1 + S2', color='#d62728')
+    ax.bar(center_pos + offset, n_clear_fusion, width, label='S1S2', color='#d62728')
 
     ax.set_xticks(np.arange(len(labels)))
-    ax.set_xticklabels(labels, rotation=90, fontsize=fontsize)
+    ax.set_xticklabels(labels, rotation=0, fontsize=fontsize)
     ax.set_xlim((-0.5, len(labels) - 0.5))
+    ax.set_xlabel('AOI', fontsize=fontsize)
 
     max_value = (max(n_clear_sar) // 5 + 1) * 5
     y_ticks = np.arange(0, max_value + 1, 5)
@@ -50,7 +51,7 @@ def urban_extraction_comparison(config_names: list, dataset: str, numeric_names:
     inbetween_space = 0.1
     fontsize = 20
     colors = ['#1f77b4', '#d62728']
-    labels = ['S1', 'S1 + S2']
+    labels = ['S1', 'S1S2']
 
     def set_box_color(bp, color):
         plt.setp(bp['boxes'], color=color)
@@ -91,12 +92,13 @@ def urban_extraction_comparison(config_names: list, dataset: str, numeric_names:
         ax.plot([], c=colors[i], label=labels[i])
 
     if numeric_names:
-        x_tick_labels = [f'AOI {i + 1}' for i in range(len(aoi_ids))]
+        x_tick_labels = [f'{i + 1}' for i in range(len(aoi_ids))]
     else:
         x_tick_labels = [aoi_id[4:15] for aoi_id in labels]
 
     ax.set_xticks(center_pos)
-    ax.set_xticklabels(x_tick_labels, rotation=90, fontsize=fontsize)
+    ax.set_xticklabels(x_tick_labels, rotation=0, fontsize=fontsize)
+    ax.set_xlabel('AOI', fontsize=fontsize)
     ax.set_ylabel('F1 score', fontsize=fontsize)
     y_ticks = np.linspace(0, 1, 6)
     ax.set_ylim((0, 1))
@@ -106,11 +108,9 @@ def urban_extraction_comparison(config_names: list, dataset: str, numeric_names:
     plt.show()
 
 
-def all_sites_plot(dataset: str, save_plot: bool = False):
-    pass
-
-
-def change_detection_comparison():
+def change_detection_comparison(config_names: str, dataset: str, models: list):
+    aoi_ids = dataset_helpers.get_aoi_ids(dataset)
+    fig, ax = plt.subplots(1, 1, figsize=(len(aoi_ids), 6))
     pass
 
 
@@ -118,4 +118,4 @@ if __name__ == '__main__':
     ds = 'spacenet7'
     timeseries_length_comparison(ds, numeric_names=True)
     config_names = ['sar_jaccardmorelikeloss', 'fusionda_cons05_jaccardmorelikeloss']
-    # urban_extraction_comparison(config_names, ds, numeric_names=True)
+    urban_extraction_comparison(config_names, ds, numeric_names=True)

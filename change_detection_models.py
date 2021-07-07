@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 class ChangeDetectionMethod(ABC):
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, config_name: str = None):
         self.name = name
 
     @ abstractmethod
@@ -224,7 +224,7 @@ class StepFunctionModel(ChangeDatingMethod):
 
         return np.array(change).astype(np.bool)
 
-    def change_dating(self, dataset: str, aoi_id: str) -> np.ndarray:
+    def change_dating(self, dataset: str, aoi_id: str, config_name: str = None) -> np.ndarray:
         self._fit(dataset, aoi_id)
 
         return np.array(self.cached_fit).astype(np.uint8)
