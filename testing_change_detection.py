@@ -52,9 +52,8 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
 
 def quantitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str):
 
-    # TODO: different quantitative testing for oscd dataset (not penalizing omissions)
-    pred = model.change_detection(dataset, aoi_id, dataset_helpers.include_masked())
-    gt = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked())
+    pred = model.change_detection(dataset, aoi_id)
+    gt = label_helpers.generate_change_label(dataset, aoi_id)
 
     precision = metrics.compute_precision(pred, gt)
     recall = metrics.compute_recall(pred, gt)
@@ -97,12 +96,12 @@ if __name__ == '__main__':
     model = sf
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(ds))):
         if dataset_helpers.length_timeseries(ds, aoi_id, dataset_helpers.include_masked()) > 6:
-            qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel1')
-            # quantitative_testing(model, ds, aoi_id)
+            # qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel1')
+            quantitative_testing(model, ds, aoi_id)
             pass
 
     # qualitative_testing(model, ds, 'L15-0566E-1185N_2265_3451_13', save_plot=False)
 
-    quantitative_testing_dataset(model, ds)
+    # quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
 

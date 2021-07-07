@@ -175,9 +175,23 @@ def produce_change_date_label(dataset: str, aoi_id: str):
     geofiles.write_tif(file, change_date.astype(np.uint8), transform, crs)
 
 
-def study_site_mosaic(dataset: str, satellite: str, dim=(3, 4)):
+def study_site_mosaic(dataset: str, satellite: str, dim: tuple = (3, 4)):
+    rows, cols = dim
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
-    assert(dim[0] * dim[1] == len(aoi_ids))
+    assert(rows * cols == len(aoi_ids))
+
+    plot_size = 3
+    fig, axs = plt.subplots(*dim, figsize=(dim[0] * plot_size, dim[1] * plot_size))
+
+    for index, aoi_id in enumerate(aoi_ids):
+        i_row = index %
+        year, month = dataset_helpers.get_date_from_index(-1, dataset, aoi_id, dataset_helpers.include_masked())
+        if satellite == 'sentinel1':
+            visualization.plot_sar(ax, dataset, aoi_id, year, month)
+        else:
+            visualization.plot_optical(ax, dataset, aoi_id, year, month)
+    plt.show()
+
 
 if __name__ == '__main__':
     ds = 'spacenet7'
@@ -190,4 +204,5 @@ if __name__ == '__main__':
         # produce_timeseries_cube(ds, aoi_id)
         pass
 
-    visualize_timeseries_length(ds, numeric_names=True)
+    study_site_mosaic(ds, 'sentinel2', dim=(3, 4))
+    # visualize_timeseries_length(ds, numeric_names=True)
