@@ -1,4 +1,4 @@
-from utils import label_helpers, prediction_helpers, dataset_helpers, visualization, geofiles
+from utils import label_helpers, input_helpers, dataset_helpers, visualization, geofiles
 import change_detection_models as cd_models
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -15,18 +15,18 @@ def qualitative_testing(model: cd_models.ChangeDatingMethod, aoi_id: str, save_p
     grid = plt.GridSpec(ph+1, 4, wspace=0.1, hspace=0.1)
     ax_t1 = fig.add_subplot(grid[:ph, 0])
     visualization.plot_optical(ax_t1, 'spacenet7', aoi_id, dates[0][0], dates[0][1])
-    ax_t1.set_title('S2 Start TS', fontsize=20)
+    ax_t1.set_title(r'(a) S2 Img $t_1$', fontsize=20)
     ax_t2 = fig.add_subplot(grid[:ph, 1])
     visualization.plot_optical(ax_t2, 'spacenet7', aoi_id, dates[-1][0], dates[-1][1])
-    ax_t2.set_title('S2 End TS', fontsize=20)
+    ax_t2.set_title(r'(b) S2 Img $t_n$', fontsize=20)
 
     ax_gt = fig.add_subplot(grid[:ph, 2])
     visualization.plot_change_date_label(ax_gt, aoi_id, dataset_helpers.include_masked())
-    ax_gt.set_title(f'Change Timestamp GT', fontsize=20)
+    ax_gt.set_title(f'(c) GT', fontsize=20)
 
     ax_pred = fig.add_subplot(grid[:ph, 3])
     visualization.plot_change_date(ax_pred, pred_change_date, len(dates))
-    ax_pred.set_title(f'Change Timestamp Pred', fontsize=20)
+    ax_pred.set_title(f'(d) Prediction', fontsize=20)
 
     ax_cbar = fig.add_subplot(grid[ph, :])
     visualization.plot_change_data_bar(ax_cbar, dates)
@@ -74,12 +74,16 @@ def quantitative_testing_dataset(model: cd_models.ChangeDatingMethod):
     print(f'RMSE: {rmse:.3f}')
 
 
+# TODO: implement inference for comparison
+def run_change_dating_inference(model: cd_models.ChangeDatingMethod, dataset: str):
+    pass
+
+
 if __name__ == '__main__':
 
-    sf = cd_models.StepFunctionModel(n_stable=6)
-    bpd = cd_models.BreakPointDetection(max_error=3, min_segment_length=1)
+    sf = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
 
-    model = bpd
+    model = sf
     aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for i, aoi_id in enumerate(aoi_ids):
         print(i)

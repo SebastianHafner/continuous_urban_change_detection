@@ -1,4 +1,4 @@
-from utils import dataset_helpers, label_helpers, visualization, metrics
+from utils import dataset_helpers, label_helpers, visualization, metrics, geofiles
 import matplotlib.pyplot as plt
 import change_detection_models as cd_models
 import numpy as np
@@ -84,7 +84,13 @@ def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod, dataset
 
 
 def run_change_detection_inference(model: cd_models.ChangeDetectionMethod, dataset: str):
-    pass
+    for aoi_id in tqdm(dataset_helpers.get_aoi_ids(ds)):
+        pred = model.change_detection(dataset, aoi_id)
+        transform, crs = dataset_helpers.get_geo(dataset, aoi_id)
+        path = dataset_helpers.root_path() / 'inference' / model.name / dataset_helpers.config_name()
+        path.mkdir(exist_ok=True)
+        file = path / f'change_{aoi_id}.tif'
+        geofiles.write_tif(file, pred.astype(np.uint8), transform, crs)
 
 
 if __name__ == '__main__':
@@ -101,11 +107,11 @@ if __name__ == '__main__':
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(ds))):
         if dataset_helpers.length_timeseries(ds, aoi_id, dataset_helpers.include_masked()) > 6:
             # qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel1')
-            quantitative_testing(model, ds, aoi_id)
+            # quantitative_testing(model, ds, aoi_id)
             pass
 
     # qualitative_testing(model, ds, 'L15-0566E-1185N_2265_3451_13', save_plot=False)
 
     # quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
-
+    run_change_detection_inference(sf, ds)
