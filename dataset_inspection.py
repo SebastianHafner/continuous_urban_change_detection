@@ -175,26 +175,46 @@ def produce_change_date_label(dataset: str, aoi_id: str):
     geofiles.write_tif(file, change_date.astype(np.uint8), transform, crs)
 
 
-def study_site_mosaic(dataset: str, satellite: str, dim: tuple = (4, 3)):
-    rows, cols = dim
-    aoi_ids = dataset_helpers.get_aoi_ids(dataset)
-    assert(rows * cols == len(aoi_ids))
+def show_data_availability(dataset: str, aoi_id: str):
+    timeseries = dataset_helpers.aoi_metadata(dataset, aoi_id)
+    n = len(timeseries)
 
-    plot_size = 3
-    fig, axs = plt.subplots(rows, cols, figsize=(cols * plot_size, rows * plot_size))
+    fig, ax = plt.subplots(1, 1, figsize=(n, 5))
+    fontsize = 20
 
-    for index, aoi_id in enumerate(aoi_ids):
-        ax = axs[index // cols, index % cols]
-        year, month = dataset_helpers.get_date_from_index(0, dataset, aoi_id, dataset_helpers.include_masked())
-        if satellite == 'sentinel1':
-            visualization.plot_sar(ax, dataset, aoi_id, year, month)
-        else:
-            visualization.plot_optical(ax, dataset, aoi_id, year, month)
-        ax.set_title(f'AOI {index + 1}', fontsize=16)
+    coords = [[], []]
+    for index, (_, _, mask, s1, s2) in enumerate(timeseries):
+        if s1:
+            coords[0].append(index)
+            coords[1].append(1)
+        if s2:
+            coords[0].append(index)
+            coords[1].append(2)
+        if not mask:
+            coords[0].append(index)
+            coords[1].append(3)
 
-    file = dataset_helpers.root_path() / 'plots' / 'inspection' / 'study_sites_mosaic.png'
-    plt.savefig(file, dpi=300, bbox_inches='tight')
+    ax.scatter(*coords, marker='+', c='k', s=100)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    ax.set_title(aoi_id, fontsize=fontsize)
+
+    # y axis
+    ax.set_ylim((0.5, 3.5))
+    ax.set_yticks([1, 2, 3])
+    ax.set_yticklabels(['S1', 'S2', 'Planet'], fontsize=fontsize)
+
+    # x axis
+    x_labels = [f'{str(year)[2:]}-{month:02d}' for year, month, *_ in timeseries]
+    ax.set_xticks(np.arange(n))
+    ax.set_xticklabels(x_labels, fontsize=fontsize)
+
     plt.show()
+
+
+def print_timeseries():
+    pass
 
 
 if __name__ == '__main__':
@@ -203,7 +223,8 @@ if __name__ == '__main__':
         # produce_satellite_timeseries_cube(ds, aoi_id, 'sentinel1', 'VV')
         # produce_change_date_label(ds, aoi_id)
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
-        visualize_all_data(ds, aoi_id, save_plot=True)
+        show_data_availability(ds, aoi_id)
+        # visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         # produce_timeseries_cube(ds, aoi_id)
         pass

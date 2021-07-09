@@ -145,21 +145,33 @@ def date2index(date: list) -> int:
 # include masked data is only
 def get_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False, ignore_bad_data: bool = True) -> list:
     aoi_md = aoi_metadata(dataset, aoi_id)
+
+    # unpacking settings
     s = settings()
+    input_sensor = s['INPUT']['SENSOR']
+    consistent_length = s['CONSISTENT_TIMESERIES_LENGTH']
+
     if ignore_bad_data:
-        input_sensor = s['INPUT']['SENSOR']
         if input_sensor == 'sentinel1':
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1]
         elif input_sensor == 'sentinel2':
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s2]
         else:
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1 and s2]
+
+        if consistent_length:
+            # make sure that for the first and last timestamps all images (i.e., s1, s2 and planet) are clean
+            clean_indices = [i for i, (_, _, mask, s1, s2) in enumerate(timeseries) if not mask and s1 and s2]
+            min_clean, max_clean = min(clean_indices), max(clean_indices)
+            timeseries = timeseries[min_clean:max_clean + 1]
+
         if include_masked_data:
             # trim time series at beginning and end such that it starts and ends with an unmasked timestamp
             unmasked_indices = [i for i, (_, _, mask, *_) in enumerate(timeseries) if not mask]
             min_unmasked, max_unmasked = min(unmasked_indices), max(unmasked_indices)
             timeseries = timeseries[min_unmasked:max_unmasked + 1]
         else:
+            # remove all masked timestamps
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if not mask]
     else:
         timeseries = aoi_md

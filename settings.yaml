@@ -17,6 +17,7 @@ INPUT:
     fusion: 'fusionda_cons05_jaccardmorelikeloss'
 
 INCLUDE_MASKED_DATA: True
+CONSISTENT_TIMESERIES_LENGTH: True
 
 PLOTTING:
   FONTSIZE: 16
