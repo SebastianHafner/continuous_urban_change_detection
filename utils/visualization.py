@@ -123,15 +123,14 @@ def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
     ax.set_yticks([])
 
 
-def plot_classification(ax, pred: np.ndarray, dataset: str, aoi_id: str, include_masked_data: bool = False):
-    label = label_helpers.generate_change_label(dataset, aoi_id, include_masked_data).astype(np.bool)
-    pred = pred.astype(np.bool)
+def plot_classification(ax, pred: np.ndarray, dataset: str, aoi_id: str):
+    label = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked()).astype(np.bool)
+    pred = pred.squeeze().astype(np.bool)
     tp = np.logical_and(pred, label)
     fp = np.logical_and(pred, ~label)
     fn = np.logical_and(~pred, label)
 
     img = np.zeros(pred.shape, dtype=np.uint8)
-    m, n = img.shape
 
     img[tp] = 1
     img[fp] = 2

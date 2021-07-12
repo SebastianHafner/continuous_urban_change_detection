@@ -143,6 +143,38 @@ def change_detection_comparison(model_name: str, config_names: str, dataset: str
     plt.show()
 
 
+def change_detection_comparison_v2(model_name: str, config_names: str, dataset: str, aoi_ids: list,
+                                   column_names: list = None, row_names: list = None):
+    fontsize = 20
+    rows = len(aoi_ids)
+    cols = 2 + len(config_names)
+
+    plot_size = 3
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * plot_size, rows * plot_size))
+
+    for i, aoi_id in enumerate(tqdm(aoi_ids)):
+        start_year, start_month = dataset_helpers.get_date_from_index(0, dataset, aoi_id)
+        visualization.plot_optical(axs[i, 0], dataset, aoi_id, start_year, start_month, vis='true_color')
+
+        end_year, end_month = dataset_helpers.get_date_from_index(-1, dataset, aoi_id)
+        visualization.plot_optical(axs[i, 1], dataset, aoi_id, end_year, end_month, vis='true_color')
+
+        for i_cfg, config_name in enumerate(config_names):
+            pred_file = dataset_helpers.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
+            pred, _, _ = geofiles.read_tif(pred_file)
+            visualization.plot_classification(axs[i, 2 + i_cfg], pred, dataset, aoi_id)
+
+    if row_names is not None:
+        for i, row_name in enumerate(row_names):
+            axs[i, 0].set_ylabel(row_name, fontsize=fontsize)
+
+    if column_names is not None:
+        for j, col_name in enumerate(column_names):
+            axs[-1, j].set_xlabel(col_name, fontsize=fontsize)
+
+    plt.show()
+
+
 
 if __name__ == '__main__':
     ds = 'spacenet7'
@@ -158,5 +190,10 @@ if __name__ == '__main__':
     ]
     column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) GT', '(d) S1', '(e) S1S2']
     row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
-    change_detection_comparison('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
-                                row_names=row_names)
+    # change_detection_comparison('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
+    #                             row_names=row_names)
+
+    column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) S1', '(d) S1S2']
+    row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
+    change_detection_comparison_v2('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
+                                   row_names=row_names)
