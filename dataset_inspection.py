@@ -213,10 +213,6 @@ def show_data_availability(dataset: str, aoi_id: str):
     plt.show()
 
 
-def print_timeseries():
-    pass
-
-
 if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):

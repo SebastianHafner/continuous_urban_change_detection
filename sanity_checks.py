@@ -1,13 +1,12 @@
-from utils import geofiles, visualization, dataset_helpers, prediction_helpers, label_helpers, mask_helpers
+from utils import visualization, dataset_helpers, input_helpers, label_helpers, mask_helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
-def sanity_check_change_detection_label(dataset: str, aoi_id: str, include_masked_data: bool = False,
-                                        include_buildings_label: bool = True, save_plot: bool = False):
+def sanity_check_change_detection_label(dataset: str, aoi_id: str, save_plot: bool = False):
     # buildings labels only exist for spacenet7 dataset
-    include_buildings_label = include_buildings_label and dataset == 'spacenet7'
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id, include_masked_data)
+    include_buildings_label = dataset == 'spacenet7'
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
 
     n_plots = 5 if include_buildings_label else 3
     fig, axs = plt.subplots(1, n_plots, figsize=(5 * n_plots, 5))
@@ -15,17 +14,21 @@ def sanity_check_change_detection_label(dataset: str, aoi_id: str, include_maske
     # first
     year_first, month_first, *_ = dates[0]
     visualization.plot_optical(axs[0], dataset, aoi_id, year_first, month_first)
+    axs[0].set_title(f'{year_first}-{month_first:02d}')
     if include_buildings_label:
         visualization.plot_buildings(axs[1], aoi_id, year_first, month_first)
 
     # last
     year_last, month_last, *_ = dates[-1]
-    visualization.plot_optical(axs[2 if include_buildings_label else 1], dataset, aoi_id, year_last, month_last)
+    ax_opt_end = axs[2 if include_buildings_label else 1]
+    visualization.plot_optical(ax_opt_end, dataset, aoi_id, year_last, month_last)
+    ax_opt_end.set_title(f'{year_last}-{month_last:02d}')
     if include_buildings_label:
         visualization.plot_buildings(axs[3], aoi_id, year_last, month_last)
 
     # change label
-    visualization.plot_change_label(axs[4 if include_buildings_label else 2], dataset, aoi_id, include_masked_data)
+    visualization.plot_change_label(axs[4 if include_buildings_label else 2], dataset, aoi_id,
+                                    dataset_helpers.include_masked())
 
     if not save_plot:
         plt.show()
@@ -138,14 +141,10 @@ def sanity_check_mask_numbers(dataset: str, aoi_id: str):
 
 
 if __name__ == '__main__':
-    ds = 'oscd'
+    ds = 'spacenet7'
     for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        sanity_check_change_detection_label(ds, aoi_id, include_masked_data=True, save_plot=True)
+        sanity_check_change_detection_label(ds, aoi_id, save_plot=True)
         # sanity_check_change_dating_label(ds, aoi_id, include_masked_data=True, save_plot=True)
         # sanity_check_masks(ds, aoi_id, save_plot=True)
         # sanity_check_mask_numbers(ds, aoi_id)
         pass
-
-    # sanity_check_change_detection_label(ds, 'L15-0331E-1257N_1327_3160_13', include_masked_data=False, save_plot=False)
-    # sanity_check_change_dating_label(ds, 'L15-0586E-1127N_2345_3680_13', include_masked_data=True, save_plot=False)
-    # sanity_check_buildings_label(ds, 'L15-1479E-1101N_5916_3785_13', include_masked_data=True, save_plot=False)
