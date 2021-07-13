@@ -3,11 +3,14 @@ import matplotlib.pyplot as plt
 import change_detection_models as cd_models
 import numpy as np
 from tqdm import tqdm
+import scipy
 
 FONTSIZE = 20
 
+
 # supported modes: first_last, all
-def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, save_plot: bool = False):
+def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include_regression_line: bool = False,
+                      save_plot: bool = False):
 
     f1_scores_extraction = []
     f1_scores_change = []
@@ -32,17 +35,28 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, save_pl
         f1_scores_change.append(metrics.compute_f1_score(pred_change, label_change))
 
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.scatter(f1_scores_extraction, f1_scores_change, c='k')
+
+    s = dataset_helpers.settings()
+    color = '#1f77b4' if s['INPUT']['SENSOR'] == 'sentinel1' else '#d62728'
+    ax.scatter(f1_scores_extraction, f1_scores_change, c=color)
     ticks = np.linspace(0, 1, 6)
     tick_labels = [f'{tick:.1f}' for tick in ticks]
     ax.set_xlim((0, 1))
     ax.set_xticks(ticks)
     ax.set_xticklabels(tick_labels, fontsize=FONTSIZE)
-    ax.set_xlabel('F1 score (urban extraction)', fontsize=FONTSIZE)
+    ax.set_xlabel('F1 score urban extraction', fontsize=FONTSIZE)
     ax.set_ylim((0, 1))
     ax.set_yticks(ticks)
     ax.set_yticklabels(tick_labels, fontsize=FONTSIZE)
-    ax.set_ylabel('F1 score (change detection)', fontsize=FONTSIZE)
+    ax.set_ylabel('F1 score change detection', fontsize=FONTSIZE)
+
+    if include_regression_line:
+        linreg = scipy.stats.linregress(f1_scores_extraction, f1_scores_change)
+        values = np.linspace(0, 1, 5)
+        label = f'{linreg.intercept:.2f} + {linreg.slope:.2f}x (R-square = {linreg.rvalue:.2f})'
+        ax.plot(values, linreg.intercept + linreg.slope * values, 'k', label=label)
+        ax.legend(frameon=False, loc='upper left', fontsize=FONTSIZE)
+
 
     if not save_plot:
         plt.show()
@@ -101,5 +115,5 @@ def sensitivity_to_omissions(model: cd_models.ChangeDetectionMethod, include_mas
 if __name__ == '__main__':
 
     sf = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
-    sensitivity_to_f1(sf, 'all', save_plot=False)
+    sensitivity_to_f1(sf, 'first_last', include_regression_line=True, save_plot=False)
     # sensitivity_to_omissions(stepfunction, True, save_plot=False)
