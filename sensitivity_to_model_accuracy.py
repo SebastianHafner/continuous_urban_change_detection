@@ -1,11 +1,10 @@
-from utils import dataset_helpers, label_helpers, prediction_helpers, visualization, metrics
+from utils import dataset_helpers, label_helpers, input_helpers, visualization, metrics
 import matplotlib.pyplot as plt
 import change_detection_models as cd_models
 import numpy as np
 from tqdm import tqdm
 
 FONTSIZE = 20
-
 
 # supported modes: first_last, all
 def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, save_plot: bool = False):
@@ -22,7 +21,7 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, save_pl
             ts = [ts[0], ts[-1]]
         for year, month, *_ in ts:
             label = label_helpers.load_label(aoi_id, year, month)
-            pred = prediction_helpers.load_prediction('spacenet7', aoi_id, year, month)
+            pred = input_helpers.load_prediction('spacenet7', aoi_id, year, month)
             pred = pred > 0.5
             f1_scores_ts.append(metrics.compute_f1_score(pred, label))
         f1_scores_extraction.append(np.mean(f1_scores_ts))
@@ -64,7 +63,7 @@ def sensitivity_to_omissions(model: cd_models.ChangeDetectionMethod, include_mas
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids('spacenet7'))):
 
         # compute average urban extraction f1 score
-        omissions = prediction_helpers.compute_omissions('spacenet7', aoi_id, include_masked_data)
+        omissions = input_helpers.compute_omissions('spacenet7', aoi_id, include_masked_data)
         omission_rate = np.sum(omissions) / np.size(omissions)
         omissions_extraction.append(omission_rate)
 
@@ -101,7 +100,6 @@ def sensitivity_to_omissions(model: cd_models.ChangeDetectionMethod, include_mas
 
 if __name__ == '__main__':
 
-    pcc = cd_models.PostClassificationComparison()
     sf = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
     sensitivity_to_f1(sf, 'all', save_plot=False)
     # sensitivity_to_omissions(stepfunction, True, save_plot=False)
