@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def timeseries_length_comparison(dataset: str, numeric_names: bool = False):
+
+
+def timeseries_length_comparison_barcharts(dataset: str, numeric_names: bool = False):
     labels, n_clear_sar, n_clear_fusion = [], [], []
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
     for aoi_id in tqdm(aoi_ids):
@@ -45,7 +47,7 @@ def timeseries_length_comparison(dataset: str, numeric_names: bool = False):
     plt.show()
 
 
-def urban_extraction_comparison(config_names: list, dataset: str, numeric_names: bool = False):
+def urban_extraction_comparison_boxplots(config_names: list, dataset: str, numeric_names: bool = False):
 
     width = 0.2
     inbetween_space = 0.1
@@ -108,8 +110,9 @@ def urban_extraction_comparison(config_names: list, dataset: str, numeric_names:
     plt.show()
 
 
-def change_detection_comparison(model_name: str, config_names: str, dataset: str, aoi_ids: list, column_names: list = None,
-                                row_names: list = None):
+
+def change_detection_comparison(model_name: str, config_names: list, dataset: str, aoi_id: str,
+                                column_names: list = None):
 
     fontsize = 20
     rows = len(aoi_ids)
@@ -143,8 +146,43 @@ def change_detection_comparison(model_name: str, config_names: str, dataset: str
     plt.show()
 
 
-def change_detection_comparison_v2(model_name: str, config_names: str, dataset: str, aoi_ids: list,
-                                   column_names: list = None, row_names: list = None):
+def change_detection_comparison_assembled(model_name: str, config_names: list, dataset: str, aoi_ids: list,
+                                          column_names: list = None, row_names: list = None):
+
+    fontsize = 20
+    rows = len(aoi_ids)
+    cols = 3 + len(config_names)
+
+    plot_size = 3
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * plot_size, rows * plot_size))
+
+    for i, aoi_id in enumerate(tqdm(aoi_ids)):
+        start_year, start_month = dataset_helpers.get_date_from_index(0, dataset, aoi_id)
+        visualization.plot_optical(axs[i, 0], dataset, aoi_id, start_year, start_month, vis='true_color')
+
+        end_year, end_month = dataset_helpers.get_date_from_index(-1, dataset, aoi_id)
+        visualization.plot_optical(axs[i, 1], dataset, aoi_id, end_year, end_month, vis='true_color')
+
+        visualization.plot_change_label(axs[i, 2], dataset, aoi_id)
+
+        for i_cfg, config_name in enumerate(config_names):
+            pred_file = dataset_helpers.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
+            pred, _, _ = geofiles.read_tif(pred_file)
+            visualization.plot_blackwhite(axs[i, 3 + i_cfg], pred)
+
+    if row_names is not None:
+        for i, row_name in enumerate(row_names):
+            axs[i, 0].set_ylabel(row_name, fontsize=fontsize)
+
+    if column_names is not None:
+        for j, col_name in enumerate(column_names):
+            axs[-1, j].set_xlabel(col_name, fontsize=fontsize)
+
+    plt.show()
+
+
+def change_detection_comparison_assembled_v2(model_name: str, config_names: str, dataset: str, aoi_ids: list,
+                                             column_names: list = None, row_names: list = None):
     fontsize = 20
     rows = len(aoi_ids)
     cols = 2 + len(config_names)

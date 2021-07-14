@@ -1,50 +1,11 @@
 from pathlib import Path
-from utils import geofiles
+from utils import geofiles, config
 import preprocess_spacenet7
 import preprocess_oscd
-import yaml
-
-
-def settings() -> dict:
-    with open(Path.cwd() / 'settings.yaml') as file:
-        s = yaml.load(file, Loader=yaml.FullLoader)
-    return s
-
-
-# dataset names
-def spacenet7_dataset_name() -> str:
-    s = settings()
-    return Path(s['DATASET_NAMES']['SPACENET7'])
-
-
-def oscd_dataset_name() -> str:
-    s = settings()
-    return Path(s['DATASET_NAMES']['OSCD'])
 
 
 def dataset_name(dataset: str) -> str:
-    return spacenet7_dataset_name()if dataset == 'spacenet7' else oscd_dataset_name()
-
-
-# dataset paths
-def root_path() -> Path:
-    s = settings()
-    return Path(s['PATHS']['ROOT_PATH'])
-
-
-def dataset_path(dataset: str) -> Path:
-    return root_path() / dataset_name(dataset)
-
-
-# path to origin SpaceNet7 dataset
-def spacenet7_path() -> Path:
-    s = settings()
-    return Path(s['PATHS']['SPACENET7_PATH'])
-
-
-def oscd_path() -> Path:
-    s = settings()
-    return Path(s['PATHS']['OSCD_PATH'])
+    return config.spacenet7_dataset_name()if dataset == 'spacenet7' else config.oscd_dataset_name()
 
 
 def bad_data(dataset: str) -> dict:
@@ -60,7 +21,7 @@ def missing_aois() -> list:
 
 
 def spacenet7_timestamps() -> dict:
-    timestamps_file = dataset_path('spacenet7') / 'spacenet7_timestamps.json'
+    timestamps_file = config.dataset_path('spacenet7') / 'spacenet7_timestamps.json'
     if not timestamps_file.exists():
         preprocess_spacenet7.assemble_spacenet7_timestamps()
     assert(timestamps_file.exists())
@@ -69,7 +30,7 @@ def spacenet7_timestamps() -> dict:
 
 
 def oscd_timestamps() -> dict:
-    timestamps_file = dataset_path('oscd') / 'oscd_timestamps.json'
+    timestamps_file = config.dataset_path('oscd') / 'oscd_timestamps.json'
     if not timestamps_file.exists():
         preprocess_oscd.assemble_oscd_timestamps()
     assert (timestamps_file.exists())
@@ -83,7 +44,7 @@ def timestamps(dataset: str) -> dict:
 
 # metadata functions
 def oscd_metadata() -> dict:
-    metadata_file = dataset_path('oscd') / 'metadata.json'
+    metadata_file = config.dataset_path('oscd') / 'metadata.json'
     if not metadata_file.exists():
         preprocess_oscd.generate_oscd_metadata_file()
     assert (metadata_file.exists())
@@ -92,7 +53,7 @@ def oscd_metadata() -> dict:
 
 
 def spacenet7_metadata() -> dict:
-    metadata_file = dataset_path('spacenet7') / 'metadata.json'
+    metadata_file = config.dataset_path('spacenet7') / 'metadata.json'
     if not metadata_file.exists():
         preprocess_spacenet7.generate_spacenet7_metadata_file()
     assert (metadata_file.exists())
@@ -122,18 +83,6 @@ def metadata_timestamp(dataset: str, aoi_id: str, year: int, month: int) -> int:
         y, m, *_ = ts
         if y == year and month == month:
             return ts
-
-
-def config_name() -> str:
-    s = settings()
-    sensor = s['INPUT']['SENSOR']
-    config_name_dict = s['INPUT']['CONFIG_NAME_DICT']
-    if sensor == 'sentinel1':
-        return config_name_dict['sar']
-    elif sensor == 'sentinel2':
-        return config_name_dict['optical']
-    else:
-        return config_name_dict['fusion']
 
 
 def date2index(date: list) -> int:
