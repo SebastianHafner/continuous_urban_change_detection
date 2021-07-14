@@ -4,6 +4,10 @@ import preprocess_spacenet7
 import preprocess_oscd
 
 
+def dataset_path(dataset: str) -> Path:
+    return config.root_path() / dataset_name(dataset)
+
+
 def dataset_name(dataset: str) -> str:
     return config.spacenet7_dataset_name()if dataset == 'spacenet7' else config.oscd_dataset_name()
 
@@ -30,7 +34,7 @@ def spacenet7_timestamps() -> dict:
 
 
 def oscd_timestamps() -> dict:
-    timestamps_file = config.dataset_path('oscd') / 'oscd_timestamps.json'
+    timestamps_file = dataset_path('oscd') / 'oscd_timestamps.json'
     if not timestamps_file.exists():
         preprocess_oscd.assemble_oscd_timestamps()
     assert (timestamps_file.exists())
@@ -44,7 +48,7 @@ def timestamps(dataset: str) -> dict:
 
 # metadata functions
 def oscd_metadata() -> dict:
-    metadata_file = config.dataset_path('oscd') / 'metadata.json'
+    metadata_file = dataset_path('oscd') / 'metadata.json'
     if not metadata_file.exists():
         preprocess_oscd.generate_oscd_metadata_file()
     assert (metadata_file.exists())
@@ -53,7 +57,7 @@ def oscd_metadata() -> dict:
 
 
 def spacenet7_metadata() -> dict:
-    metadata_file = config.dataset_path('spacenet7') / 'metadata.json'
+    metadata_file = dataset_path('spacenet7') / 'metadata.json'
     if not metadata_file.exists():
         preprocess_spacenet7.generate_spacenet7_metadata_file()
     assert (metadata_file.exists())
@@ -95,20 +99,15 @@ def date2index(date: list) -> int:
 def get_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False, ignore_bad_data: bool = True) -> list:
     aoi_md = aoi_metadata(dataset, aoi_id)
 
-    # unpacking settings
-    s = settings()
-    input_sensor = s['INPUT']['SENSOR']
-    consistent_length = s['CONSISTENT_TIMESERIES_LENGTH']
-
     if ignore_bad_data:
-        if input_sensor == 'sentinel1':
+        if config.input_sensor() == 'sentinel1':
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1]
-        elif input_sensor == 'sentinel2':
+        elif config.input_sensor() == 'sentinel2':
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s2]
         else:
             timeseries = [[y, m, mask, s1, s2] for y, m, mask, s1, s2 in aoi_md if s1 and s2]
 
-        if consistent_length:
+        if config.consistent_timeseries_length():
             # make sure that for the first and last timestamps all images (i.e., s1, s2 and planet) are clean
             clean_indices = [i for i, (_, _, mask, s1, s2) in enumerate(timeseries) if not mask and s1 and s2]
             min_clean, max_clean = min(clean_indices), max(clean_indices)
@@ -134,32 +133,22 @@ def length_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = Fal
 
 
 def get_date_from_index(index: int, dataset: str, aoi_id: str, include_masked_data: bool = False,
-                        ignore_bad_data: bool = True) -> int:
+                        ignore_bad_data: bool = True) -> tuple:
     ts = get_timeseries(dataset, aoi_id, include_masked_data, ignore_bad_data)
     year, month, *_ = ts[index]
     return year, month
 
 
 def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
-    ts = timestamps(dataset)
-    s = settings()
-    if dataset == 'spacenet7':
-        if s['SUBSET_SPACENET7']['ACTIVATE']:
-            aoi_ids = s['SUBSET_SPACENET7']['AOI_IDS']
-        else:
-            # handle exclude missing aoi ids
-            aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
+    if config.subset_activated(dataset):
+        aoi_ids = config.subset_aois(dataset)
     else:
-        if s['SUBSET_OSCD']['ACTIVATE']:
-            aoi_ids = s['SUBSET_OSCD']['AOI_IDS']
+        if dataset == 'spacenet7':
+            aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
         else:
+            ts = timestamps(dataset)
             aoi_ids = ts.keys()
     return sorted(aoi_ids)
-
-
-def include_masked() -> bool:
-    s = settings()
-    return s['INCLUDE_MASKED_DATA']
 
 
 def get_geo(dataset: str, aoi_id: str) -> tuple:

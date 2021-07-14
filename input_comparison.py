@@ -1,9 +1,7 @@
-from utils import dataset_helpers, input_helpers, label_helpers, mask_helpers, metrics, visualization, geofiles
+from utils import dataset_helpers, input_helpers, label_helpers, mask_helpers, metrics, visualization, geofiles, config
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
-
-
 
 
 def timeseries_length_comparison_barcharts(dataset: str, numeric_names: bool = False):
@@ -110,51 +108,46 @@ def urban_extraction_comparison_boxplots(config_names: list, dataset: str, numer
     plt.show()
 
 
-
 def change_detection_comparison(model_name: str, config_names: list, dataset: str, aoi_id: str,
-                                column_names: list = None):
+                                column_names: list = None, save_plot: bool = False):
 
-    fontsize = 20
-    rows = len(aoi_ids)
     cols = 3 + len(config_names)
+    fig, axs = plt.subplots(1, cols, figsize=(cols * config.plotsize(), config.plotsize()))
 
-    plot_size = 3
-    fig, axs = plt.subplots(rows, cols, figsize=(cols * plot_size, rows * plot_size))
+    start_year, start_month = dataset_helpers.get_date_from_index(0, dataset, aoi_id)
+    visualization.plot_optical(axs[0], dataset, aoi_id, start_year, start_month, vis='true_color')
 
-    for i, aoi_id in enumerate(tqdm(aoi_ids)):
-        start_year, start_month = dataset_helpers.get_date_from_index(0, dataset, aoi_id)
-        visualization.plot_optical(axs[i, 0], dataset, aoi_id, start_year, start_month, vis='true_color')
+    end_year, end_month = dataset_helpers.get_date_from_index(-1, dataset, aoi_id)
+    visualization.plot_optical(axs[1], dataset, aoi_id, end_year, end_month, vis='true_color')
 
-        end_year, end_month = dataset_helpers.get_date_from_index(-1, dataset, aoi_id)
-        visualization.plot_optical(axs[i, 1], dataset, aoi_id, end_year, end_month, vis='true_color')
+    visualization.plot_change_label(axs[2], dataset, aoi_id)
 
-        visualization.plot_change_label(axs[i, 2], dataset, aoi_id)
-
-        for i_cfg, config_name in enumerate(config_names):
-            pred_file = dataset_helpers.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
-            pred, _, _ = geofiles.read_tif(pred_file)
-            visualization.plot_blackwhite(axs[i, 3 + i_cfg], pred)
-
-    if row_names is not None:
-        for i, row_name in enumerate(row_names):
-            axs[i, 0].set_ylabel(row_name, fontsize=fontsize)
+    for i_cfg, config_name in enumerate(config_names):
+        pred_file = config.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
+        pred, _, _ = geofiles.read_tif(pred_file)
+        visualization.plot_blackwhite(axs[3 + i_cfg], pred)
 
     if column_names is not None:
         for j, col_name in enumerate(column_names):
-            axs[-1, j].set_xlabel(col_name, fontsize=fontsize)
+            axs[j].set_xlabel(col_name, fontsize=config.fontsize())
 
-    plt.show()
+    if save_plot:
+        output_path = config.root_path() / 'plots' / 'input_comparison'
+        output_path.mkdir(exist_ok=True)
+        output_file = output_path / f'{aoi_id}.png'
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()
+    plt.close(fig)
 
 
 def change_detection_comparison_assembled(model_name: str, config_names: list, dataset: str, aoi_ids: list,
                                           column_names: list = None, row_names: list = None):
 
-    fontsize = 20
     rows = len(aoi_ids)
     cols = 3 + len(config_names)
 
-    plot_size = 3
-    fig, axs = plt.subplots(rows, cols, figsize=(cols * plot_size, rows * plot_size))
+    fig, axs = plt.subplots(rows, cols, figsize=(cols * config.plotsize(), rows * config.plotsize()))
 
     for i, aoi_id in enumerate(tqdm(aoi_ids)):
         start_year, start_month = dataset_helpers.get_date_from_index(0, dataset, aoi_id)
@@ -166,17 +159,17 @@ def change_detection_comparison_assembled(model_name: str, config_names: list, d
         visualization.plot_change_label(axs[i, 2], dataset, aoi_id)
 
         for i_cfg, config_name in enumerate(config_names):
-            pred_file = dataset_helpers.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
+            pred_file = config.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
             pred, _, _ = geofiles.read_tif(pred_file)
             visualization.plot_blackwhite(axs[i, 3 + i_cfg], pred)
 
     if row_names is not None:
         for i, row_name in enumerate(row_names):
-            axs[i, 0].set_ylabel(row_name, fontsize=fontsize)
+            axs[i, 0].set_ylabel(row_name, fontsize=config.fontsize())
 
     if column_names is not None:
         for j, col_name in enumerate(column_names):
-            axs[-1, j].set_xlabel(col_name, fontsize=fontsize)
+            axs[-1, j].set_xlabel(col_name, fontsize=config.fontsize())
 
     plt.show()
 
@@ -198,7 +191,7 @@ def change_detection_comparison_assembled_v2(model_name: str, config_names: str,
         visualization.plot_optical(axs[i, 1], dataset, aoi_id, end_year, end_month, vis='true_color')
 
         for i_cfg, config_name in enumerate(config_names):
-            pred_file = dataset_helpers.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
+            pred_file = config.root_path() / 'inference' / model_name / config_name / f'change_{aoi_id}.tif'
             pred, _, _ = geofiles.read_tif(pred_file)
             visualization.plot_classification(axs[i, 2 + i_cfg], pred, dataset, aoi_id)
 
@@ -213,12 +206,11 @@ def change_detection_comparison_assembled_v2(model_name: str, config_names: str,
     plt.show()
 
 
-
 if __name__ == '__main__':
     ds = 'spacenet7'
-    timeseries_length_comparison(ds, numeric_names=True)
+    timeseries_length_comparison_barcharts(ds, numeric_names=True)
     config_names = ['sar_jaccardmorelikeloss', 'fusionda_cons05_jaccardmorelikeloss']
-    urban_extraction_comparison(config_names, ds, numeric_names=True)
+    urban_extraction_comparison_boxplots(config_names, ds, numeric_names=True)
     aoi_ids = [
         'L15-0358E-1220N_1433_3310_13',
         'L15-0368E-1245N_1474_3210_13',
@@ -228,10 +220,14 @@ if __name__ == '__main__':
     ]
     column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) GT', '(d) S1', '(e) S1S2']
     row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
-    change_detection_comparison('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
-                                row_names=row_names)
+    change_detection_comparison_assembled('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
+                                          row_names=row_names)
+    #
+    # column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) S1', '(d) S1S2']
+    # row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
+    # change_detection_comparison_assembled_v2('stepfunction', config_names, ds, aoi_ids=aoi_ids,
+    #                                          column_names=column_names, row_names=row_names)
 
-    column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) S1', '(d) S1S2']
-    row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
-    change_detection_comparison_v2('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
-                                   row_names=row_names)
+    for aoi_id in tqdm(dataset_helpers.get_aoi_ids(ds)):
+        change_detection_comparison('stepfunction', config_names, 'spacenet7', aoi_id, column_names=column_names,
+                                    save_plot=True)

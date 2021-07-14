@@ -1,5 +1,5 @@
 from pathlib import Path
-from utils import geofiles, visualization, dataset_helpers, label_helpers, metrics, mask_helpers
+from utils import geofiles, visualization, dataset_helpers, label_helpers, metrics, mask_helpers, config
 from utils import input_helpers
 import matplotlib.pyplot as plt
 import numpy as np
@@ -213,17 +213,58 @@ def show_data_availability(dataset: str, aoi_id: str):
     plt.show()
 
 
+def study_site_mosaic(dataset: str, satellite: str, grid: np.ndarray = None, n_cols: int = 5):
+    aoi_ids = dataset_helpers.get_aoi_ids(dataset)
+
+    if grid is None:
+        n_rows = len(aoi_ids) // n_cols
+        if len(aoi_ids) % n_cols != 0:
+            n_rows += 1
+        grid = np.ones((n_rows, n_cols))
+    n_rows, n_cols = grid.shape
+
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(n_cols * config.plotsize(), n_rows * config.plotsize()))
+
+    aoi_index = 0
+    for i in range(n_rows):
+        for j in range(n_cols):
+            ax = axs[i, j]
+
+            if aoi_index < len(aoi_ids) and bool(grid[i, j]):
+                aoi_id = aoi_ids[aoi_index]
+
+                year, month = dataset_helpers.get_date_from_index(0, dataset, aoi_id, config.include_masked())
+                if satellite == 'sentinel1':
+                    visualization.plot_sar(ax, dataset, aoi_id, year, month)
+                else:
+                    visualization.plot_optical(ax, dataset, aoi_id, year, month)
+                ax.set_title(f'AOI {aoi_index + 1}', fontsize=config.fontsize())
+                aoi_index += 1
+            else:
+                ax.axis('off')
+
+    file = config.root_path() / 'plots' / 'inspection' / 'study_sites_mosaic.png'
+    plt.savefig(file, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
 if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
         # produce_satellite_timeseries_cube(ds, aoi_id, 'sentinel1', 'VV')
         # produce_change_date_label(ds, aoi_id)
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
-        show_data_availability(ds, aoi_id)
+        # show_data_availability(ds, aoi_id)
         # visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         # produce_timeseries_cube(ds, aoi_id)
         pass
 
-    # study_site_mosaic(ds, 'sentinel2')
+    grid = np.array([[0, 0, 0, 0, 1],
+                     [0, 0, 0, 0, 1],
+                     [0, 0, 0, 0, 1],
+                     [1, 1, 1, 1, 1],
+                     [1, 1, 1, 1, 1]])
+
+    study_site_mosaic(ds, 'sentinel2', grid=grid)
     # visualize_timeseries_length(ds, numeric_names=True)

@@ -1,4 +1,4 @@
-from utils import dataset_helpers, label_helpers, input_helpers, visualization, metrics
+from utils import dataset_helpers, label_helpers, input_helpers, metrics, config
 import matplotlib.pyplot as plt
 import change_detection_models as cd_models
 import numpy as np
@@ -19,7 +19,7 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
 
         # compute average urban extraction f1 score
         f1_scores_ts = []
-        ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, config.include_masked())
         if mode == 'first_last':
             ts = [ts[0], ts[-1]]
         for year, month, *_ in ts:
@@ -31,13 +31,12 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
 
         # compute change f1 score
         pred_change = model.change_detection('spacenet7', aoi_id)
-        label_change = label_helpers.generate_change_label('spacenet7', aoi_id, dataset_helpers.include_masked())
+        label_change = label_helpers.generate_change_label('spacenet7', aoi_id, config.include_masked())
         f1_scores_change.append(metrics.compute_f1_score(pred_change, label_change))
 
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    s = dataset_helpers.settings()
-    color = '#1f77b4' if s['INPUT']['SENSOR'] == 'sentinel1' else '#d62728'
+    color = '#1f77b4' if config.input_sensor() == 'sentinel1' else '#d62728'
     ax.scatter(f1_scores_extraction, f1_scores_change, c=color)
     ticks = np.linspace(0, 1, 6)
     tick_labels = [f'{tick:.1f}' for tick in ticks]
@@ -57,11 +56,10 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
         ax.plot(values, linreg.intercept + linreg.slope * values, 'k', label=label)
         ax.legend(frameon=False, loc='upper left', fontsize=FONTSIZE)
 
-
     if not save_plot:
         plt.show()
     else:
-        save_path = dataset_helpers.root_path() / 'plots' / 'sensitivity_analysis'
+        save_path = config.root_path() / 'plots' / 'sensitivity_analysis'
         save_path.mkdir(exist_ok=True)
         output_file = save_path / f'{model.name}_{mode}.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
@@ -115,5 +113,5 @@ def sensitivity_to_omissions(model: cd_models.ChangeDetectionMethod, include_mas
 if __name__ == '__main__':
 
     sf = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
-    sensitivity_to_f1(sf, 'first_last', include_regression_line=True, save_plot=False)
+    sensitivity_to_f1(sf, 'all', include_regression_line=True, save_plot=False)
     # sensitivity_to_omissions(stepfunction, True, save_plot=False)

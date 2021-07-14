@@ -1,27 +1,20 @@
 from pathlib import Path
-from utils import geofiles, dataset_helpers, label_helpers
+from utils import geofiles, dataset_helpers, config
 import numpy as np
 
 
 def input_name() -> str:
-    s = dataset_helpers.settings()
-    input_type = s['INPUT']['TYPE']
-    input_sensor = s['INPUT']['SENSOR']
-    return f'{input_type}_{input_sensor}'
+    return f'{config.input_type()}_{config.input_sensor()}'
 
 
 def load_input(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
-    s = dataset_helpers.settings()
-    input_type = s['INPUT']['TYPE']
-    if input_type == 'cnn':
+    if config.input_type() == 'cnn':
         return load_prediction(dataset, aoi_id, year, month)
     else:
-        input_sensor = s['INPUT']['SENSOR']
-        input_band = s['INPUT']['BAND']
-        if input_sensor == 'sentinel1':
-            return load_sentinel1(dataset, aoi_id, year, month, input_band)
+        if config.input_sensor == 'sentinel1':
+            return load_sentinel1(dataset, aoi_id, year, month, config.input_band())
         else:
-            return load_sentinel2(dataset, aoi_id, year, month, input_band)
+            return load_sentinel2(dataset, aoi_id, year, month, config.input_band())
 
 
 def load_sentinel1(dataset: str, aoi_id: str, year: int, month: int, band: str):
@@ -51,7 +44,7 @@ def load_prediction_raw(dataset: str, aoi_id: str, year: int, month: int, config
 
 
 def load_prediction(dataset: str, aoi_id: str, year: int, month: int) -> np.ndarray:
-    pred = load_prediction_raw(dataset, aoi_id, year, month, dataset_helpers.config_name())
+    pred = load_prediction_raw(dataset, aoi_id, year, month, config.config_name())
     return pred
 
 

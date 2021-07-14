@@ -1,4 +1,4 @@
-from utils import dataset_helpers, label_helpers, visualization, metrics, geofiles
+from utils import dataset_helpers, label_helpers, visualization, metrics, geofiles, config
 import matplotlib.pyplot as plt
 import change_detection_models as cd_models
 import numpy as np
@@ -8,7 +8,7 @@ from tqdm import tqdm
 def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str, save_plot: bool = False,
                         color_misclassifications: bool = False, sensor: str = 'sentinel2', show_f1: bool = True):
 
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, config.include_masked())
     start_year, start_month, *_ = dates[0]
     end_year, end_month, *_ = dates[-1]
 
@@ -25,17 +25,17 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
     axs[0].set_title('S2 Start TS')
     axs[1].set_title('S2 End TS')
 
-    visualization.plot_change_label(axs[2], dataset, aoi_id, dataset_helpers.include_masked())
+    visualization.plot_change_label(axs[2], dataset, aoi_id, config.include_masked())
     axs[2].set_title('Change GT')
 
     change = model.change_detection(dataset, aoi_id)
     if color_misclassifications:
-        visualization.plot_classification(axs[3], change, dataset, aoi_id, dataset_helpers.include_masked())
+        visualization.plot_classification(axs[3], change, dataset, aoi_id)
     else:
         visualization.plot_blackwhite(axs[3], change)
     title = 'Change Pred'
     if show_f1:
-        label = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked())
+        label = label_helpers.generate_change_label(dataset, aoi_id, config.include_masked())
         f1 = metrics.compute_f1_score(change.flatten(), label.flatten())
         title = f'{title} (F1 {f1:.3f})'
     axs[3].set_title(title)
@@ -43,9 +43,9 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
     if not save_plot:
         plt.show()
     else:
-        save_path = dataset_helpers.root_path() / 'plots' / 'testing' / model.name / 'change_detection'
+        save_path = config.root_path() / 'plots' / 'testing' / model.name
         save_path.mkdir(exist_ok=True)
-        output_file = save_path / f'change_{aoi_id}.png'
+        output_file = save_path / f'change_{config.input_sensor()}_{aoi_id}.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
@@ -87,7 +87,7 @@ def run_change_detection_inference(model: cd_models.ChangeDetectionMethod, datas
     for aoi_id in tqdm(dataset_helpers.get_aoi_ids(ds)):
         pred = model.change_detection(dataset, aoi_id)
         transform, crs = dataset_helpers.get_geo(dataset, aoi_id)
-        path = dataset_helpers.root_path() / 'inference' / model.name / dataset_helpers.config_name()
+        path = config.root_path() / 'inference' / model.name / config.config_name()
         path.mkdir(exist_ok=True)
         file = path / f'change_{aoi_id}.tif'
         geofiles.write_tif(file, pred.astype(np.uint8), transform, crs)
@@ -105,8 +105,8 @@ if __name__ == '__main__':
     logm = cd_models.LogisticFunctionModel(min_prob_diff=0.2)
     model = sf
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(ds))):
-        if dataset_helpers.length_timeseries(ds, aoi_id, dataset_helpers.include_masked()) > 6:
-            # qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel1')
+        if dataset_helpers.length_timeseries(ds, aoi_id, config.include_masked()) > 6:
+            qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel2')
             # quantitative_testing(model, ds, aoi_id)
             pass
 
@@ -114,4 +114,4 @@ if __name__ == '__main__':
 
     # quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
-    run_change_detection_inference(sf, ds)
+    # run_change_detection_inference(sf, ds)

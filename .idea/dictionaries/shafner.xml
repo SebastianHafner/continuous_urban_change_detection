@@ -6,13 +6,16 @@
       <w>cbar</w>
       <w>cmap</w>
       <w>geotransform</w>
+      <w>misclassifications</w>
       <w>multitemporal</w>
       <w>nourban</w>
       <w>oscd</w>
+      <w>postsegment</w>
       <w>presegment</w>
       <w>probs</w>
       <w>rmse</w>
       <w>spacenet</w>
+      <w>stepfunction</w>
       <w>thresholding</w>
       <w>timeseries</w>
     </words>

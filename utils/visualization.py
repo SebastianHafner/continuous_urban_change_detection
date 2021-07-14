@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from utils import geofiles, dataset_helpers, label_helpers, mask_helpers, input_helpers
+from utils import geofiles, dataset_helpers, label_helpers, mask_helpers, input_helpers, config
 import numpy as np
 from pathlib import Path
 from matplotlib import cm
@@ -112,9 +112,9 @@ def plot_change_data_bar(ax, dates: list):
     norm = mpl.colors.Normalize(vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
     cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap.get_cmap(), norm=norm, orientation='horizontal',
                                    ticks=cb_ticks)
-    cb.set_label('Change Date (yy-mm)', fontsize=20)
+    cb.set_label('Change Date (yy-mm)', fontsize=config.fontsize())
     cb_ticklabels = ['NC'] + [dataset_helpers.date2str(d) for d in dates] + ['BUA']
-    cb.ax.set_xticklabels(cb_ticklabels, fontsize=20)
+    cb.ax.set_xticklabels(cb_ticklabels, fontsize=config.fontsize())
 
 
 def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
@@ -124,7 +124,7 @@ def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
 
 
 def plot_classification(ax, pred: np.ndarray, dataset: str, aoi_id: str):
-    label = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked()).astype(np.bool)
+    label = label_helpers.generate_change_label(dataset, aoi_id, config.include_masked()).astype(np.bool)
     pred = pred.squeeze().astype(np.bool)
     tp = np.logical_and(pred, label)
     fp = np.logical_and(pred, ~label)

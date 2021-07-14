@@ -1,9 +1,8 @@
 import numpy as np
 from skimage.filters import threshold_otsu, threshold_local
 from abc import ABC, abstractmethod
-from utils import input_helpers, dataset_helpers, geofiles, label_helpers
+from utils import input_helpers, dataset_helpers, geofiles, label_helpers, config
 import scipy
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
@@ -147,10 +146,10 @@ class StepFunctionModel(ChangeDatingMethod):
         if dataset == self.fitted_dataset and self.fitted_aoi == aoi_id:
             return
 
-        timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
+        timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, config.include_masked())
         self.length_ts = len(timeseries)
 
-        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, dataset_helpers.include_masked())
+        probs_cube = input_helpers.load_input_timeseries(dataset, aoi_id, config.include_masked())
 
         errors = []
         mean_diffs = []
