@@ -132,6 +132,15 @@ def length_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = Fal
     return len(ts)
 
 
+def duration_timeseries(dataset: str, aoi_id: str, include_masked_data: bool = False,
+                        ignore_bad_data: bool = True) -> int:
+    start_year, start_month = get_date_from_index(0, dataset, aoi_id, include_masked_data, ignore_bad_data)
+    end_year, end_month = get_date_from_index(-1, dataset, aoi_id, include_masked_data, ignore_bad_data)
+    d_year = end_year - start_year
+    d_month = end_month - start_month
+    return d_year * 12 + d_month
+
+
 def get_date_from_index(index: int, dataset: str, aoi_id: str, include_masked_data: bool = False,
                         ignore_bad_data: bool = True) -> tuple:
     ts = get_timeseries(dataset, aoi_id, include_masked_data, ignore_bad_data)
