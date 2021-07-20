@@ -1,5 +1,5 @@
 import numpy as np
-from utils import dataset_helpers, label_helpers, input_helpers, metrics, mask_helpers
+from utils import dataset_helpers, label_helpers, input_helpers, metrics, mask_helpers, config
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -75,17 +75,16 @@ def show_f1_evaluation(sort_by_performance: bool = False):
     aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for aoi_id in tqdm(aoi_ids):
 
-        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, config.include_masked())
         f1_scores, precisions, recalls = [], [], []
 
         for i in range(length_ts):
-            year, month = dataset_helpers.get_date_from_index(i, 'spacenet7', aoi_id, dataset_helpers.include_masked())
+            year, month = dataset_helpers.get_date_from_index(i, 'spacenet7', aoi_id, config.include_masked())
             # TODO: maybe fully masked from index
             if mask_helpers.is_fully_masked('spacenet7', aoi_id, year, month):
                 continue
-            label = label_helpers.load_label_in_timeseries(aoi_id, i, dataset_helpers.include_masked())
-            pred = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i,
-                                                                    dataset_helpers.include_masked())
+            label = label_helpers.load_label_in_timeseries(aoi_id, i, config.include_masked())
+            pred = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, i, config.include_masked())
             pred = pred > 0.5
             f1_scores.append(metrics.compute_f1_score(pred, label))
 
@@ -110,14 +109,63 @@ def show_f1_evaluation(sort_by_performance: bool = False):
     plt.show()
 
 
+def print_urban_extraction_statistics():
+    data = []
+
+    aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
+    for i, aoi_id in enumerate(aoi_ids):
+
+        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, config.include_masked())
+        f1_scores, precisions, recalls = [], [], []
+
+        for j in range(length_ts):
+            year, month = dataset_helpers.get_date_from_index(j, 'spacenet7', aoi_id, config.include_masked())
+            if mask_helpers.is_fully_masked('spacenet7', aoi_id, year, month):
+                continue
+            label = label_helpers.load_label_in_timeseries(aoi_id, j, config.include_masked())
+            pred = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, j, config.include_masked())
+            pred = pred > 0.5
+            f1_scores.append(metrics.compute_f1_score(pred, label))
+
+        median_f1 = np.median(f1_scores)
+        q25, q75 = np.percentile(f1_scores, [25, 75])
+        iqr_f1 = q75 - q25
+        print(f'AOI {i + 1} ({aoi_id}) - median F1: {median_f1:.3f}; IQR F1: {iqr_f1:.3f}')
+
+
+def print_overall_performance():
+    labels, preds = [], []
+    aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
+    for aoi_id in tqdm(aoi_ids):
+
+        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, config.include_masked())
+
+        for j in range(length_ts):
+            year, month = dataset_helpers.get_date_from_index(j, 'spacenet7', aoi_id, config.include_masked())
+            if mask_helpers.is_fully_masked('spacenet7', aoi_id, year, month):
+                continue
+            label = label_helpers.load_label_in_timeseries(aoi_id, j, config.include_masked())
+            pred = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, j, config.include_masked())
+            pred = pred > 0.5
+            labels.append(label.flatten())
+            preds.append(pred.flatten())
+
+    preds, labels = np.concatenate(preds), np.concatenate(labels)
+    f1 = metrics.compute_f1_score(preds, labels)
+    precision = metrics.compute_precision(preds, labels)
+    recall = metrics.compute_recall(preds, labels)
+
+    print(f'F1 {f1:.3f} - Precision {precision:.3f} - Recall {recall:.3f}')
+
+
 def test_last_prediction_improvement():
 
     preds_ref, preds_exp, preds_mean, labels = [], [], [], []
 
     for aoi_id in tqdm(dataset_helpers.get_aoi_ids('spacenet7')):
 
-        n = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
-        pred_cube = input_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        n = dataset_helpers.length_timeseries('spacenet7', aoi_id, config.include_masked())
+        pred_cube = input_helpers.load_prediction_timeseries('spacenet7', aoi_id, config.include_masked())
 
         def exponential_distribution(x: np.ndarray, la: float = 0.25) -> np.ndarray:
             return la * np.e ** (-la * x)
@@ -134,12 +182,11 @@ def test_last_prediction_improvement():
         pred_exp = pred_exp > 0.5
         preds_exp.append(pred_exp.flatten())
 
-        pred_ref = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
-                                                                    dataset_helpers.include_masked())
+        pred_ref = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1, config.include_masked())
         pred_ref = pred_ref > 0.5
         preds_ref.append(pred_ref.flatten())
 
-        label = label_helpers.load_label_in_timeseries(aoi_id, -1, dataset_helpers.include_masked())
+        label = label_helpers.load_label_in_timeseries(aoi_id, -1, config.include_masked())
         labels.append(label.flatten())
 
     preds_exp, preds_ref, preds_mean = np.concatenate(preds_exp), np.concatenate(preds_ref), np.concatenate(preds_mean)
@@ -159,14 +206,13 @@ def plot_last_prediction_improvement():
     aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for i, aoi_id in enumerate(tqdm(aoi_ids)):
 
-        n = dataset_helpers.length_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
-        pred_cube = input_helpers.load_prediction_timeseries('spacenet7', aoi_id, dataset_helpers.include_masked())
+        n = dataset_helpers.length_timeseries('spacenet7', aoi_id, config.include_masked())
+        pred_cube = input_helpers.load_prediction_timeseries('spacenet7', aoi_id, config.include_masked())
         pred_cube = pred_cube.transpose((2, 0, 1))
 
-        label = label_helpers.load_label_in_timeseries(aoi_id, -1, dataset_helpers.include_masked())
+        label = label_helpers.load_label_in_timeseries(aoi_id, -1, config.include_masked())
 
-        pred_ref = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1,
-                                                                    dataset_helpers.include_masked())
+        pred_ref = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, -1, config.include_masked())
         pred_ref = pred_ref > 0.5
         f1s_ref.append(metrics.compute_f1_score(pred_ref.flatten(), label.flatten()))
 
@@ -209,8 +255,9 @@ if __name__ == '__main__':
 
         pass
 
-    show_f1_evaluation(sort_by_performance=False)
-
+    # show_f1_evaluation(sort_by_performance=False)
+    print_urban_extraction_statistics()
+    # print_overall_performance()
 
     # plot_last_prediction_improvement()
 
