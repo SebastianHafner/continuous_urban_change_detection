@@ -4,14 +4,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def timeseries_length_comparison_barcharts(dataset: str, numeric_names: bool = False):
-    labels, n_clear_sar, n_clear_fusion = [], [], []
+def timeseries_length_comparison_barcharts(dataset: str, numeric_names: bool = False, include_ts_duration: bool = False):
+    labels, n_clear_sar, n_clear_fusion, duration = [], [], [], []
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
     for aoi_id in tqdm(aoi_ids):
         metadata = dataset_helpers.metadata(dataset)['aois'][aoi_id]
         n_clear_sar.append(len([_ for _, _, _, s1, s2 in metadata if s1]))
         n_clear_fusion.append(len([_ for _, _, _, s1, s2 in metadata if s1 and s2]))
         labels.append(aoi_id)
+        d = dataset_helpers.duration_timeseries(dataset, aoi_id, config.include_masked())
+        duration.append(d + 1)
 
     if numeric_names:
         labels = [f'{i + 1}' for i in range(len(labels))]
@@ -25,8 +27,8 @@ def timeseries_length_comparison_barcharts(dataset: str, numeric_names: bool = F
 
     center_pos = np.arange(len(aoi_ids))
     offset = (width + inbetween_space) / 2
-    ax.bar(center_pos - offset, n_clear_sar, width, label='S1', color='#1f77b4')
-    ax.bar(center_pos + offset, n_clear_fusion, width, label='S1S2', color='#d62728')
+    bar_sar = ax.bar(center_pos - offset, n_clear_sar, width, label='S1', color='#1f77b4')
+    bar_fusion = ax.bar(center_pos + offset, n_clear_fusion, width, label='S1S2', color='#d62728')
 
     ax.set_xticks(np.arange(len(labels)))
     ax.set_xticklabels(labels, rotation=0, fontsize=fontsize)
@@ -38,9 +40,14 @@ def timeseries_length_comparison_barcharts(dataset: str, numeric_names: bool = F
     ax.set_ylim((0, max_value))
     ax.set_yticks(y_ticks)
     ax.set_yticklabels([f'{y_tick:.0f}' for y_tick in y_ticks], fontsize=fontsize)
-    ax.set_ylabel('Timeseries length', fontsize=fontsize)
+    ax.set_ylabel('Time series length', fontsize=fontsize)
 
     ax.legend(ncol=2, handletextpad=0.4, columnspacing=1.2, frameon=False, loc='upper center', fontsize=fontsize)
+
+    if include_ts_duration:
+        for i, (rect_sar, rect_fusion) in enumerate(zip(bar_sar, bar_fusion)):
+            height = max(rect_sar.get_height(), rect_fusion.get_height())
+            plt.text(center_pos[i], height + 0.3, f'{duration[i]:.0f}', ha='center', va='bottom', fontsize=config.fontsize())
 
     plt.show()
 
@@ -208,9 +215,9 @@ def change_detection_comparison_assembled_v2(model_name: str, config_names: str,
 
 if __name__ == '__main__':
     ds = 'spacenet7'
-    timeseries_length_comparison_barcharts(ds, numeric_names=True)
+    timeseries_length_comparison_barcharts(ds, numeric_names=True, include_ts_duration=True)
     config_names = ['sar_jaccardmorelikeloss', 'fusionda_cons05_jaccardmorelikeloss']
-    urban_extraction_comparison_boxplots(config_names, ds, numeric_names=True)
+    # urban_extraction_comparison_boxplots(config_names, ds, numeric_names=True)
     aoi_ids = [
         'L15-0358E-1220N_1433_3310_13',
         'L15-0368E-1245N_1474_3210_13',
@@ -220,14 +227,14 @@ if __name__ == '__main__':
     ]
     column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) GT', '(d) S1', '(e) S1S2']
     row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
-    change_detection_comparison_assembled('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
-                                          row_names=row_names)
+    # change_detection_comparison_assembled('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
+    #                                       row_names=row_names)
     #
     # column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) S1', '(d) S1S2']
     # row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
     # change_detection_comparison_assembled_v2('stepfunction', config_names, ds, aoi_ids=aoi_ids,
     #                                          column_names=column_names, row_names=row_names)
-
-    for aoi_id in tqdm(dataset_helpers.get_aoi_ids(ds)):
-        change_detection_comparison('stepfunction', config_names, 'spacenet7', aoi_id, column_names=column_names,
-                                    save_plot=True)
+    #
+    # for aoi_id in tqdm(dataset_helpers.get_aoi_ids(ds)):
+    #     change_detection_comparison('stepfunction', config_names, 'spacenet7', aoi_id, column_names=column_names,
+    #                                 save_plot=True)
