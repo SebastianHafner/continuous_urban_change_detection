@@ -248,6 +248,8 @@ def study_site_mosaic(dataset: str, satellite: str, grid: np.ndarray = None, n_c
     plt.show()
 
 
+def print_dataset_size()
+
 if __name__ == '__main__':
     ds = 'spacenet7'
     for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
