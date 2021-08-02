@@ -52,7 +52,8 @@ def timeseries_length_comparison_barcharts(dataset: str, numeric_names: bool = F
     plt.show()
 
 
-def urban_extraction_comparison_boxplots(config_names: list, dataset: str, numeric_names: bool = False):
+def urban_extraction_comparison_boxplots(config_names: list, modalities: list, dataset: str,
+                                         numeric_names: bool = False):
 
     width = 0.2
     inbetween_space = 0.1
@@ -69,12 +70,14 @@ def urban_extraction_comparison_boxplots(config_names: list, dataset: str, numer
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
     fig, ax = plt.subplots(1, 1, figsize=(len(aoi_ids), 6))
 
-    for i, config_name in enumerate(config_names):
+    for i, (config_name, modality) in enumerate(zip(config_names, modalities)):
         data = []
         for aoi_id in tqdm(aoi_ids):
             metadata = dataset_helpers.metadata(dataset)['aois'][aoi_id]
-            if i == 0:
+            if modality == 'sar':
                 timeseries = [(year, month, mask, s1, s2) for year, month, mask, s1, s2 in metadata if s1]
+            elif modality == 'optical':
+                timeseries = [(year, month, mask, s1, s2) for year, month, mask, s1, s2 in metadata if s2]
             else:
                 timeseries = [(year, month, mask, s1, s2) for year, month, mask, s1, s2 in metadata if s1 and s2]
             f1_scores = []
@@ -216,8 +219,9 @@ def change_detection_comparison_assembled_v2(model_name: str, config_names: str,
 if __name__ == '__main__':
     ds = 'spacenet7'
     timeseries_length_comparison_barcharts(ds, numeric_names=True, include_ts_duration=True)
-    config_names = ['sar_jaccardmorelikeloss', 'fusionda_cons05_jaccardmorelikeloss']
-    # urban_extraction_comparison_boxplots(config_names, ds, numeric_names=True)
+    config_names = ['sar_jaccardmorelikeloss', 'fusion_jaccardmorelikeloss']
+    modalities = ['sar', 'fusion']
+    urban_extraction_comparison_boxplots(config_names, modalities, ds, numeric_names=True)
     aoi_ids = [
         'L15-0358E-1220N_1433_3310_13',
         'L15-0368E-1245N_1474_3210_13',

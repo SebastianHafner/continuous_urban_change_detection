@@ -66,10 +66,10 @@ def quantitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, a
 def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod, dataset: str):
     preds, gts = [], []
     for aoi_id in tqdm(dataset_helpers.get_aoi_ids(dataset)):
-        if dataset_helpers.length_timeseries(ds, aoi_id, dataset_helpers.include_masked()) > 6:
+        if dataset_helpers.length_timeseries(ds, aoi_id, config.include_masked()) > 6:
             pred = model.change_detection(dataset, aoi_id)
             preds.append(pred.flatten())
-            gt = label_helpers.generate_change_label(dataset, aoi_id, dataset_helpers.include_masked())
+            gt = label_helpers.generate_change_label(dataset, aoi_id, config.include_masked())
             gts.append(gt.flatten())
             assert(pred.size == gt.size)
 
@@ -106,12 +106,12 @@ if __name__ == '__main__':
     model = sf
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(ds))):
         if dataset_helpers.length_timeseries(ds, aoi_id, config.include_masked()) > 6:
-            qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel2')
+            # qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel2')
             # quantitative_testing(model, ds, aoi_id)
             pass
 
     # qualitative_testing(model, ds, 'L15-0566E-1185N_2265_3451_13', save_plot=False)
 
-    # quantitative_testing_dataset(model, ds)
+    quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
     # run_change_detection_inference(sf, ds)

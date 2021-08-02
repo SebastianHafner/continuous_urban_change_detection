@@ -248,7 +248,12 @@ def study_site_mosaic(dataset: str, satellite: str, grid: np.ndarray = None, n_c
     plt.show()
 
 
-def print_dataset_size()
+def print_dataset_size(dataset: str):
+    n = 0
+    for aoi_id in dataset_helpers.get_aoi_ids(dataset):
+        n += dataset_helpers.length_timeseries(dataset, aoi_id, config.include_masked())
+    print(n)
+
 
 if __name__ == '__main__':
     ds = 'spacenet7'
@@ -262,11 +267,12 @@ if __name__ == '__main__':
         # produce_timeseries_cube(ds, aoi_id)
         pass
 
-    grid = np.array([[0, 0, 0, 0, 1],
-                     [0, 0, 0, 0, 1],
-                     [0, 0, 0, 0, 1],
-                     [1, 1, 1, 1, 1],
-                     [1, 1, 1, 1, 1]])
-
-    study_site_mosaic(ds, 'sentinel2', grid=grid)
+    # grid = np.array([[0, 0, 0, 0, 1],
+    #                  [0, 0, 0, 0, 1],
+    #                  [0, 0, 0, 0, 1],
+    #                  [1, 1, 1, 1, 1],
+    #                  [1, 1, 1, 1, 1]])
+    #
+    # study_site_mosaic(ds, 'sentinel2', grid=grid)
     # visualize_timeseries_length(ds, numeric_names=True)
+    print_dataset_size(ds)

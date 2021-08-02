@@ -25,7 +25,7 @@ def missing_aois() -> list:
 
 
 def spacenet7_timestamps() -> dict:
-    timestamps_file = config.dataset_path('spacenet7') / 'spacenet7_timestamps.json'
+    timestamps_file = dataset_path('spacenet7') / 'spacenet7_timestamps.json'
     if not timestamps_file.exists():
         preprocess_spacenet7.assemble_spacenet7_timestamps()
     assert(timestamps_file.exists())
@@ -152,10 +152,10 @@ def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
     if config.subset_activated(dataset):
         aoi_ids = config.subset_aois(dataset)
     else:
+        ts = timestamps(dataset)
         if dataset == 'spacenet7':
             aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
         else:
-            ts = timestamps(dataset)
             aoi_ids = ts.keys()
     return sorted(aoi_ids)
 
