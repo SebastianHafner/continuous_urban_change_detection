@@ -86,6 +86,6 @@ if __name__ == '__main__':
     model = sf
     aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
     for i, aoi_id in enumerate(tqdm(aoi_ids)):
-        qualitative_testing(model, aoi_id, save_plot=True)
+        qualitative_testing(model, aoi_id, save_plot=False)
         # quantitative_testing(model, aoi_id)
     # quantitative_testing_dataset(model)
