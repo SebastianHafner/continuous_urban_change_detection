@@ -57,7 +57,7 @@ def load_prediction_in_timeseries(dataset: str, aoi_id: str, index: int, include
 
 
 def prediction_is_available(dataset: str, aoi_id: str, year: int, month: int) -> bool:
-    path = dataset_helpers.dataset_path(dataset) / aoi_id / dataset_helpers.config_name()
+    path = dataset_helpers.dataset_path(dataset) / aoi_id / config.config_name()
     pred_file = path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
     return pred_file.exists()
 

@@ -112,6 +112,6 @@ def sensitivity_to_omissions(model: cd_models.ChangeDetectionMethod, include_mas
 
 if __name__ == '__main__':
 
-    sf = cd_models.StepFunctionModel(error_multiplier=3, min_prob_diff=0.2, min_segment_length=2)
+    sf = cd_models.StepFunctionModel(error_multiplier=2, min_prob_diff=0.2, min_segment_length=2)
     sensitivity_to_f1(sf, 'all', include_regression_line=True, save_plot=False)
     # sensitivity_to_omissions(stepfunction, True, save_plot=False)

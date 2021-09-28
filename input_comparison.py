@@ -218,10 +218,10 @@ def change_detection_comparison_assembled_v2(model_name: str, config_names: str,
 
 if __name__ == '__main__':
     ds = 'spacenet7'
-    timeseries_length_comparison_barcharts(ds, numeric_names=True, include_ts_duration=True)
-    config_names = ['sar_jaccardmorelikeloss', 'fusion_jaccardmorelikeloss']
+    # timeseries_length_comparison_barcharts(ds, numeric_names=True, include_ts_duration=True)
+    config_names = ['sar_jaccardmorelikeloss', 'fusionda_cons05_jaccardmorelikeloss']
     modalities = ['sar', 'fusion']
-    urban_extraction_comparison_boxplots(config_names, modalities, ds, numeric_names=True)
+    # urban_extraction_comparison_boxplots(config_names, modalities, ds, numeric_names=True)
     aoi_ids = [
         'L15-0358E-1220N_1433_3310_13',
         'L15-0368E-1245N_1474_3210_13',
@@ -231,13 +231,13 @@ if __name__ == '__main__':
     ]
     column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) GT', '(d) S1', '(e) S1S2']
     row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
-    # change_detection_comparison_assembled('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
-    #                                       row_names=row_names)
-    #
-    # column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) S1', '(d) S1S2']
-    # row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
-    # change_detection_comparison_assembled_v2('stepfunction', config_names, ds, aoi_ids=aoi_ids,
-    #                                          column_names=column_names, row_names=row_names)
+    change_detection_comparison_assembled('stepfunction', config_names, ds, aoi_ids=aoi_ids, column_names=column_names,
+                                          row_names=row_names)
+
+    column_names = [r'(a) S2 Img $t_1$', r'(b) S2 Img $t_n$', '(c) S1', '(d) S1S2']
+    row_names = ['AOI 3', 'AOI 5', 'AOI 7', 'AOI 8', 'AOI 12']
+    change_detection_comparison_assembled_v2('stepfunction', config_names, ds, aoi_ids=aoi_ids,
+                                             column_names=column_names, row_names=row_names)
     #
     # for aoi_id in tqdm(dataset_helpers.get_aoi_ids(ds)):
     #     change_detection_comparison('stepfunction', config_names, 'spacenet7', aoi_id, column_names=column_names,

@@ -29,7 +29,7 @@ def visualize_satellite_data(dataset: str, aoi_id: str, save_plot: bool = False)
         plt.show()
     else:
         dataset_name = dataset_helpers.dataset_name(dataset)
-        output_file = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset_name / f'{aoi_id}_satellite.png'
+        output_file = config.root_path() / 'plots' / 'inspection' / dataset_name / f'{aoi_id}_satellite.png'
         output_file.parent.mkdir(exist_ok=True)
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
@@ -86,8 +86,8 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
         plt.show()
     else:
         dataset_name = dataset_helpers.dataset_name(dataset)
-        config_name = dataset_helpers.config_name()
-        output_path = dataset_helpers.root_path() / 'plots' / 'inspection' / dataset_name / config_name
+        config_name = config.config_name()
+        output_path = config.root_path() / 'plots' / 'inspection' / dataset_name / config_name
         output_file = output_path / f'{aoi_id}_data.png'
         output_file.parent.mkdir(exist_ok=True)
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
@@ -97,7 +97,7 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
 def visualize_timeseries_length(dataset: str, sort_by_length: bool = False, numeric_names: bool = False):
     data, labels = [], []
     aoi_ids = dataset_helpers.get_aoi_ids(dataset)
-    sensor = dataset_helpers.settings()['INPUT']['SENSOR']
+    sensor = config.settings()['INPUT']['SENSOR']
     for aoi_id in tqdm(aoi_ids):
         if aoi_id in dataset_helpers.missing_aois():
             continue
@@ -262,7 +262,7 @@ if __name__ == '__main__':
         # produce_change_date_label(ds, aoi_id)
         # visualize_satellite_data(ds, aoi_id, save_plot=True)
         # show_data_availability(ds, aoi_id)
-        # visualize_all_data(ds, aoi_id, save_plot=True)
+        visualize_all_data(ds, aoi_id, save_plot=True)
         # visualize_timeseries(ds, aoi_id, config_name=cfg, save_plot=True)
         # produce_timeseries_cube(ds, aoi_id)
         pass
@@ -275,4 +275,4 @@ if __name__ == '__main__':
     #
     # study_site_mosaic(ds, 'sentinel2', grid=grid)
     # visualize_timeseries_length(ds, numeric_names=True)
-    print_dataset_size(ds)
+    # print_dataset_size(ds)

@@ -25,6 +25,7 @@ def quanitative_evaluation(dataset: str, model: cd_models.ChangeDetectionMethod)
 
 
 def ablation1(error_multiplier: int, min_diff_range: tuple, step_size: float, band: str = 'VV'):
+    fontsize = 16
     min_diff_start, min_diff_end = min_diff_range
     min_diff_candidates = np.arange(min_diff_start, min_diff_end + step_size, step_size)
     file = config.root_path() / 'ablation' / f'ablation1_{config.input_sensor()}_{error_multiplier}.json'
@@ -57,15 +58,19 @@ def ablation1(error_multiplier: int, min_diff_range: tuple, step_size: float, ba
     ticks = [0, 0.2, 0.4, 0.6, 0.8, 1]
     ax.set_xlim([min_diff_start, min_diff_end])
     ax.set_xticks(ticks)
-    ax.set_xticklabels([f'{tick:.1f}' for tick in ticks], fontsize=16)
+    ax.set_xticklabels([f'{tick:.1f}' for tick in ticks], fontsize=fontsize)
+    ax.set_xlabel(r'$\lambda_2$ (min prob diff)', fontsize=fontsize)
+
     ax.set_ylim([0, 1])
     ax.set_yticks(ticks)
-    ax.set_yticklabels([f'{tick:.1f}' for tick in ticks], fontsize=16)
+    ax.set_yticklabels([f'{tick:.1f}' for tick in ticks], fontsize=fontsize)
+    ax.set_ylabel('F1 score', fontsize=fontsize)
     plt.legend(fontsize=16, frameon=False)
     plt.show()
 
 
 def ablation2(min_prob_diff: float, error_multiplier_range: tuple):
+    fontsize = 16
     error_multiplier_start, error_multiplier_end = error_multiplier_range
     error_multiplier_candidates = np.arange(error_multiplier_start, error_multiplier_end + 1)
     file = config.root_path() / 'ablation' / f'ablation2_{config.input_sensor()}_{min_prob_diff*100:.0f}.json'
@@ -89,7 +94,7 @@ def ablation2(min_prob_diff: float, error_multiplier_range: tuple):
             ablation_data['recall'].append(recall)
         geofiles.write_json(file, ablation_data)
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
     ax.plot(error_multiplier_candidates, ablation_data['f1_score'], label='F1 score')
     ax.plot(error_multiplier_candidates, ablation_data['precision'], label='Precision')
     ax.plot(error_multiplier_candidates, ablation_data['recall'], label='Recall')
@@ -97,16 +102,19 @@ def ablation2(min_prob_diff: float, error_multiplier_range: tuple):
     ax.set_xlim([error_multiplier_start, error_multiplier_end])
     ax.set_xticks(error_multiplier_candidates)
     ax.set_xticklabels([f'{tick:.0f}' for tick in error_multiplier_candidates], fontsize=16)
+    ax.set_xlabel(r'$\lambda_1$ (error multiplier)', fontsize=fontsize)
 
     y_ticks = [0, 0.2, 0.4, 0.6, 0.8, 1]
     ax.set_ylim([0, 1])
     ax.set_yticks(y_ticks)
     ax.set_yticklabels([f'{tick:.1f}' for tick in y_ticks], fontsize=16)
-    plt.legend(fontsize=16, frameon=False)
+    ax.set_ylabel('F1 score', fontsize=fontsize)
+    plt.legend(fontsize=fontsize, frameon=False)
     plt.show()
 
 
 if __name__ == '__main__':
-    # ablation1(3, min_diff_range=(0, 1), step_size=0.05)
+    ablation1(2, min_diff_range=(0, 1), step_size=0.05)
     ablation2(0.4, error_multiplier_range=(1, 6))
+
 
