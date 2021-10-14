@@ -93,6 +93,10 @@ def run_change_detection_inference(model: cd_models.ChangeDetectionMethod, datas
         geofiles.write_tif(file, pred.astype(np.uint8), transform, crs)
 
 
+def change_detection_boxplots(dataset: str, model: cd_models.ChangeDetectionMethod):
+    pass
+
+
 if __name__ == '__main__':
     ds = 'spacenet7'
 
@@ -104,14 +108,11 @@ if __name__ == '__main__':
                                            min_prob_diff=0.1)
     logm = cd_models.LogisticFunctionModel(min_prob_diff=0.2)
     model = sf
-    for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(ds))):
-        if dataset_helpers.length_timeseries(ds, aoi_id, config.include_masked()) > 6:
-            # qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel2')
-            # quantitative_testing(model, ds, aoi_id)
-            pass
+    for i, aoi_id in enumerate((dataset_helpers.get_aoi_ids(ds, min_timeseries_length=6))):
+        quantitative_testing(model, ds, aoi_id)
 
     # qualitative_testing(model, ds, 'L15-0566E-1185N_2265_3451_13', save_plot=False)
 
-    quantitative_testing_dataset(model, ds)
+    # quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
     # run_change_detection_inference(sf, ds)

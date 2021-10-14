@@ -148,7 +148,7 @@ def get_date_from_index(index: int, dataset: str, aoi_id: str, include_masked_da
     return year, month
 
 
-def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
+def get_aoi_ids(dataset: str, exclude_missing: bool = True, min_timeseries_length: int = None) -> list:
     if config.subset_activated(dataset):
         aoi_ids = config.subset_aois(dataset)
     else:
@@ -157,6 +157,13 @@ def get_aoi_ids(dataset: str, exclude_missing: bool = True) -> list:
             aoi_ids = [aoi_id for aoi_id in ts.keys() if not (exclude_missing and aoi_id in missing_aois())]
         else:
             aoi_ids = ts.keys()
+    if min_timeseries_length is not None:
+        all_aoi_ids = aoi_ids
+        aoi_ids = []
+        for aoi_id in all_aoi_ids:
+            ts_length = length_timeseries(dataset, aoi_id, config.include_masked())
+            if ts_length >= min_timeseries_length:
+                aoi_ids.append(aoi_id)
     return sorted(aoi_ids)
 
 

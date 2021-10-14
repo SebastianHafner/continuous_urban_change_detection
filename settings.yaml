@@ -9,7 +9,7 @@ DATASET_NAMES:
 
 INPUT:
   TYPE: 'cnn' # cnn or satellite
-  SENSOR: 'sentinel1' # sentinel1 or sentinel2 or fusion
+  SENSOR: 'fusion' # sentinel1 or sentinel2 or fusion
   BAND: 'VV' # see available bands
   CONFIG_NAME_DICT:
     sar: 'sar_jaccardmorelikeloss'
@@ -24,7 +24,7 @@ PLOTTING:
   PLOTSIZE: 3
 
 SUBSET_SPACENET7:
-  ACTIVATE: False
+  ACTIVATE: True
   AOI_IDS: [
     'L15-0331E-1257N_1327_3160_13',
     'L15-0357E-1223N_1429_3296_13',
