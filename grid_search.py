@@ -1,10 +1,9 @@
-from tqdm import tqdm
 import numpy as np
 from tqdm import tqdm
 from utils import dataset_helpers, config, label_helpers, metrics, geofiles
 import change_detection_models as cd_models
 import matplotlib.pyplot as plt
-
+FONTSIZE = 16
 
 def quanitative_evaluation(dataset: str, model: cd_models.ChangeDetectionMethod) -> tuple:
     preds, gts = [], []
@@ -64,9 +63,10 @@ def ablation2(min_prob_diff: float, error_multiplier_range: tuple):
     ax.set_ylim([0, 1])
     ax.set_yticks(y_ticks)
     ax.set_yticklabels([f'{tick:.1f}' for tick in y_ticks], fontsize=16)
-    ax.set_ylabel('F1 score', fontsize=fontsize)
+    ax.set_ylabel('F1 score')
     plt.legend(fontsize=fontsize, frameon=False)
     plt.show()
+
 
 # em: error multiplier, mdr: min diff probability
 def run_grid_search(em_range: tuple, em_step_size: int, mdp_range: tuple, mdp_step_size: float):
@@ -79,7 +79,8 @@ def run_grid_search(em_range: tuple, em_step_size: int, mdp_range: tuple, mdp_st
     mdp_candidates = np.arange(mdp_start, mdp_end + mdp_step_size, mdp_step_size)
     n = len(mdp_candidates)
 
-    file = config.root_path() / 'grid_search' / f'grid_search_{config.input_sensor()}.json'
+    fname = f'grid_search_{config.input_sensor()}_{config.subset_activated("spacenet7")}.json'
+    file = config.root_path() / 'grid_search' / fname
 
     if file.exists():
         ablation_data = geofiles.load_json(file)
@@ -118,19 +119,28 @@ def run_grid_search(em_range: tuple, em_step_size: int, mdp_range: tuple, mdp_st
         prec_matrix[i, j] = d['precision']
         rec_matrix[i, j] = d['recall']
 
-    fig, ax = plt.subplots(1, 1, figsize=(n, m))
-    img = ax.imshow(f1_matrix, vmin=0, vmax=1, cmap='Greens')
-    xticks = np.arange(n)
-    xticklabels = [f'{cand:.2f}' for cand in mdp_candidates]
+    fig, ax = plt.subplots(1, 1, figsize=(12, 4))
+    vmax = 0.4
+    img = ax.imshow(f1_matrix, vmin=0, vmax=vmax, cmap='jet')
+    xticks = np.arange(0, n, 2)
+    mdp_ticks = np.arange(mdp_start, mdp_end + mdp_step_size, mdp_step_size * 2)
+    xticklabels = [f'{mdp_tick:.1f}' for mdp_tick in mdp_ticks]
     ax.set_xticks(xticks)
-    ax.set_xticklabels(xticklabels)
-    ax.set_xlabel(r'$\lambda_2$ (min probability increase)')
+    ax.set_xticklabels(xticklabels, fontsize=FONTSIZE)
+    ax.set_xlabel(r'$\lambda_2$ (min probability increase)', fontsize=FONTSIZE)
     yticks = np.arange(m)
     yticklabels = [f'{cand:.0f}' for cand in em_candidates]
     ax.set_yticks(yticks)
-    ax.set_yticklabels(yticklabels)
-    ax.set_ylabel(r'$\lambda_1$ (error multiplier)')
-    fig.colorbar(img, ax=ax)
+    ax.set_yticklabels(yticklabels, fontsize=FONTSIZE)
+    ax.set_ylabel(r'$\lambda_1$ (error multiplier)', fontsize=FONTSIZE)
+    cbar = fig.colorbar(img, ax=ax)
+    cbar.ax.get_yaxis().labelpad = 20
+    cbar.ax.set_ylabel('F1 score', rotation=270, fontsize=FONTSIZE)
+    cbartick_stepsize = 0.1
+    cbarticks = np.arange(0, vmax + cbartick_stepsize, cbartick_stepsize)
+    cbar_ticklabels = [f'{cbartick:.1f}' for cbartick in cbarticks]
+    cbar.ax.get_yaxis().set_ticks(cbarticks)
+    cbar.ax.get_yaxis().set_ticklabels(cbar_ticklabels, fontsize=FONTSIZE)
     plt.show()
     plt.close(fig)
 
