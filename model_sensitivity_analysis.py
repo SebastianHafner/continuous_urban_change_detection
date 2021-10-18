@@ -16,7 +16,6 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
     f1_scores_change = []
 
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids('spacenet7'))):
-
         # compute average urban extraction f1 score
         f1_scores_ts = []
         ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, config.include_masked())

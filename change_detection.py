@@ -50,6 +50,54 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, ao
     plt.close(fig)
 
 
+def qualitative_testing_v2(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str, save_plot: bool = False,
+                        color_misclassifications: bool = False, show_f1: bool = True):
+    dates = dataset_helpers.get_timeseries(dataset, aoi_id, config.include_masked())
+    start_year, start_month, *_ = dates[0]
+    end_year, end_month, *_ = dates[-1]
+
+    fig, axs = plt.subplots(2, 3, figsize=(15, 10))
+
+    # pre image, post image and gt
+    ax_s2_t1, ax_s2_t2 = axs[0, 0], axs[1, 0]
+    visualization.plot_optical(ax_s2_t1, dataset, aoi_id, start_year, start_month)
+    visualization.plot_optical(ax_s2_t2, dataset, aoi_id, end_year, end_month)
+    ax_s2_t1.set_title(r'(a) S2 Img $t_1$', fontsize=config.fontsize())
+    ax_s2_t2.set_title(r'(d) S2 Img $t_2$', fontsize=config.fontsize())
+
+    ax_s1_t1, ax_s1_t2 = axs[0, 1], axs[1, 1]
+    visualization.plot_sar(ax_s1_t1, dataset, aoi_id, start_year, start_month)
+    visualization.plot_sar(ax_s1_t2, dataset, aoi_id, end_year, end_month)
+    ax_s1_t1.set_title(r'(b) S1 Img $t_1$', fontsize=config.fontsize())
+    ax_s1_t2.set_title(r'(e) S1 Img $t_2$', fontsize=config.fontsize())
+
+    ax_gt = axs[0, 2]
+    visualization.plot_change_label(ax_gt, dataset, aoi_id, config.include_masked())
+    ax_gt.set_title('(c) Change GT', fontsize=config.fontsize())
+
+    ax_cd = axs[1, 2]
+    change = model.change_detection(dataset, aoi_id)
+    if color_misclassifications:
+        visualization.plot_classification(ax_cd, change, dataset, aoi_id)
+    else:
+        visualization.plot_blackwhite(ax_cd, change)
+    title = '(f) Change Pred'
+    if show_f1:
+        label = label_helpers.generate_change_label(dataset, aoi_id, config.include_masked())
+        f1 = metrics.compute_f1_score(change.flatten(), label.flatten())
+        title = f'{title} (F1 {f1:.3f})'
+    ax_cd.set_title(title, fontsize=config.fontsize())
+
+    if not save_plot:
+        plt.show()
+    else:
+        save_path = config.root_path() / 'plots' / 'testing' / model.name
+        save_path.mkdir(exist_ok=True)
+        output_file = save_path / f'change_{config.input_sensor()}_{aoi_id}.png'
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+
 def quantitative_testing(model: cd_models.ChangeDetectionMethod, dataset: str, aoi_id: str):
 
     pred = model.change_detection(dataset, aoi_id)
@@ -100,18 +148,14 @@ if __name__ == '__main__':
     pcc = cd_models.PostClassificationComparison()
     thresholding = cd_models.Thresholding()
     sf = cd_models.StepFunctionModel(error_multiplier=2, min_prob_diff=0.2, min_segment_length=2)
-    sarsf = cd_models.SARStepFunctionModel(config_name='fusionda_cons05_jaccardmorelikeloss', error_multiplier=2,
-                                           min_prob_diff=0.1)
-    logm = cd_models.LogisticFunctionModel(min_prob_diff=0.2)
     model = sf
     for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(ds))):
-        if dataset_helpers.length_timeseries(ds, aoi_id, config.include_masked()) > 6:
-            # qualitative_testing(model, ds, aoi_id, save_plot=True, sensor='sentinel2')
-            # quantitative_testing(model, ds, aoi_id)
-            pass
+        # if dataset_helpers.length_timeseries(ds, aoi_id, config.include_masked()) > 6:
+        qualitative_testing_v2(model, ds, aoi_id, save_plot=True)
+        # quantitative_testing(model, ds, aoi_id)
 
     # qualitative_testing(model, ds, 'L15-0566E-1185N_2265_3451_13', save_plot=False)
 
-    quantitative_testing_dataset(model, ds)
+    # quantitative_testing_dataset(model, ds)
     # quantitative_testing(model, ds, 'L15-0683E-1006N_2732_4164_13')
     # run_change_detection_inference(sf, ds)
