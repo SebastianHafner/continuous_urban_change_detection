@@ -1,5 +1,5 @@
 from pathlib import Path
-from utils import geofiles, visualization, dataset_helpers, prediction_helpers, label_helpers, metrics
+from utils import geofiles, visualization, dataset_helpers, config
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -17,16 +17,18 @@ def produce_workflow_data(dataset: str, aoi_id: str):
             # make sentinel 1 figure
             fig, ax = plt.subplots(1, 1, figsize=(6, 6))
             visualization.plot_sar(ax, dataset, aoi_id, year, month)
-            output_path = dataset_helpers.root_path() / 'plots' / 'workflow' / 'sentinel1'
+            output_path = config.root_path() / 'plots' / 'workflow' / 'sentinel1'
             output_file = output_path / f'sentinel1_{aoi_id}_{year}_{month:02d}.png'
             plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
+            plt.close(fig)
 
             # make sentinel 2 figure
             fig, ax = plt.subplots(1, 1, figsize=(6, 6))
             visualization.plot_optical(ax, dataset, aoi_id, year, month)
-            output_path = dataset_helpers.root_path() / 'plots' / 'workflow' / 'sentinel2'
+            output_path = config.root_path() / 'plots' / 'workflow' / 'sentinel2'
             output_file = output_path / f'sentinel2_{aoi_id}_{year}_{month:02d}.png'
             plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True,)
+            plt.close(fig)
 
             # make sentinel 2 figure
             fig, ax = plt.subplots(1, 1, figsize=(6, 6))
@@ -34,9 +36,10 @@ def produce_workflow_data(dataset: str, aoi_id: str):
             ax.set_axis_off()
             fig.add_axes(ax)
             visualization.plot_prediction(ax, dataset, aoi_id, year, month)
-            output_path = dataset_helpers.root_path() / 'plots' / 'workflow' / 'prediction'
+            output_path = config.root_path() / 'plots' / 'workflow' / 'prediction'
             output_file = output_path / f'prediction_{aoi_id}_{year}_{month:02d}.png'
             plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
+            plt.close(fig)
 
 
 def export_probability_cube(dataset: str, aoi_id: str):
@@ -133,11 +136,11 @@ def plot_change_detection_and_dating_results(dataset: str, aoi_id: str):
 
 if __name__ == '__main__':
     ds = 'spacenet7'
-    aoi_id = 'L15-0358E-1220N_1433_3310_13'
+    aoi_id = 'L15-0506E-1204N_2027_3374_13'
     pixel = (288, 206)
-    # produce_workflow_data(ds, aoi_id)
+    produce_workflow_data(ds, aoi_id)
     # export_probability_cube(ds, aoi_id)
 
     # plot_constant_function_fit(ds, aoi_id, pixel)
     # plot_piecewise_constant_function_fit(ds, aoi_id, pixel, [4, 10, 16])
-    plot_change_detection_and_dating_results(ds, aoi_id)
+    # plot_change_detection_and_dating_results(ds, aoi_id)

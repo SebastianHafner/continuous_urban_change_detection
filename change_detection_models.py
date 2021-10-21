@@ -125,7 +125,7 @@ class Thresholding(ChangeDetectionMethod):
 
 class StepFunctionModel(ChangeDatingMethod):
 
-    def __init__(self, error_multiplier: int = 3, min_prob_diff: float = 0.2, min_segment_length: int = 2,
+    def __init__(self, error_multiplier: int = 2, min_prob_diff: float = 0.35, min_segment_length: int = 2,
                  improve_last: bool = False, improve_first: bool = False, noise_reduction: bool = True):
         super().__init__('stepfunction')
         self.fitted_dataset = None

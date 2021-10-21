@@ -148,6 +148,14 @@ def get_date_from_index(index: int, dataset: str, aoi_id: str, include_masked_da
     return year, month
 
 
+def get_raw_index_from_date(dataset: str, aoi_id: str, input_year: int, input_month: int) -> int:
+    raw_timeseries = metadata(dataset)['aois'][aoi_id]
+    for i, (year, month, *_) in enumerate(raw_timeseries):
+        if year == input_year and month == input_month:
+            return i
+    return -1
+
+
 def get_aoi_ids(dataset: str, exclude_missing: bool = True, min_timeseries_length: int = None) -> list:
     if config.subset_activated(dataset):
         aoi_ids = config.subset_aois(dataset)
