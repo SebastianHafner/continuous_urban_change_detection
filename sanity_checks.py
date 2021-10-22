@@ -1,6 +1,7 @@
-from utils import visualization, dataset_helpers, input_helpers, label_helpers, mask_helpers
+from utils import visualization, dataset_helpers, input_helpers, label_helpers, mask_helpers, config
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import numpy as np
 
 
 def sanity_check_change_detection_label(dataset: str, aoi_id: str, save_plot: bool = False):
@@ -140,11 +141,37 @@ def sanity_check_mask_numbers(dataset: str, aoi_id: str):
             raise Exception(msg)
 
 
+def consistent_changes(aoi_id: str):
+    label_cube = label_helpers.load_label_timeseries(aoi_id, include_masked_data=config.include_masked())
+    n = dataset_helpers.length_timeseries('spacenet7', aoi_id, include_masked_data=config.include_masked())
+    previous = label_cube[:, :, 0]
+    for i in range(1, n):
+        current = label_cube[:, :, i]
+        print(np.sum(np.isnan(current)))
+        destruction = np.logical_and(previous == 1, current == 0)
+        n_destruction = np.sum(destruction)
+        if n_destruction > 0:
+            print(n_destruction)
+        previous = current
+
+
+def deconstruction(aoi_id: str):
+    label_start = label_helpers.load_label_in_timeseries(aoi_id, 0, include_masked_data=config.include_masked())
+    label_end = label_helpers.load_label_in_timeseries(aoi_id, -1, include_masked_data=config.include_masked())
+    all_change = np.array(label_start != label_end)
+    construction = np.array(np.logical_and(label_start == 0, label_end == 1))
+    if np.sum(all_change) != np.sum(construction):
+        print(aoi_id)
+
 if __name__ == '__main__':
     ds = 'spacenet7'
-    for aoi_id in dataset_helpers.get_aoi_ids(ds):
-        sanity_check_change_detection_label(ds, aoi_id, save_plot=True)
+    for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds)):
+        # sanity_check_change_detection_label(ds, aoi_id, save_plot=True)
         # sanity_check_change_dating_label(ds, aoi_id, include_masked_data=True, save_plot=True)
         # sanity_check_masks(ds, aoi_id, save_plot=True)
         # sanity_check_mask_numbers(ds, aoi_id)
+        # consistent_changes(aoi_id)
+        deconstruction(aoi_id)
+        if i == 0:
+            pass
         pass

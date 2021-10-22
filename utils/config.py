@@ -11,13 +11,8 @@ def settings() -> dict:
 SETTINGS = settings()
 
 
-# dataset names
-def spacenet7_dataset_name() -> str:
-    return Path(SETTINGS['DATASET_NAMES']['SPACENET7'])
-
-
-def oscd_dataset_name() -> str:
-    return Path(SETTINGS['DATASET_NAMES']['OSCD'])
+def dataset_name() -> str:
+    return Path(SETTINGS['DATASET_NAME'])
 
 
 # dataset paths
@@ -28,10 +23,6 @@ def root_path() -> Path:
 # path to origin SpaceNet7 dataset
 def spacenet7_path() -> Path:
     return Path(SETTINGS['PATHS']['SPACENET7_PATH'])
-
-
-def oscd_path() -> Path:
-    return Path(SETTINGS['PATHS']['OSCD_PATH'])
 
 
 def config_name() -> str:
@@ -49,41 +40,21 @@ def include_masked() -> bool:
     return SETTINGS['INCLUDE_MASKED_DATA']
 
 
-# plotting
-def fontsize() -> int:
-    return SETTINGS['PLOTTING']['FONTSIZE']
+def subset_activated() -> bool:
+    return SETTINGS['SUBSET']['ACTIVATE']
 
 
-def plotsize() -> int:
-    return SETTINGS['PLOTTING']['PLOTSIZE']
-
-
-# sensor settings
-def subset_activated(dataset: str) -> bool:
-    if dataset == 'spacenet7':
-        return SETTINGS['SUBSET_SPACENET7']['ACTIVATE']
-    else:
-        return SETTINGS['SUBSET_OSCD']['ACTIVATE']
-
-
-def subset_aois(dataset: str) -> list:
-    if dataset == 'spacenet7':
-        return SETTINGS['SUBSET_SPACENET7']['AOI_IDS']
-    else:
-        return SETTINGS['SUBSET_OSCD']['AOI_IDS']
+def subset_aois() -> list:
+    return SETTINGS['SUBSET']['AOI_IDS']
 
 
 def input_sensor() -> str:
     return SETTINGS['INPUT']['SENSOR']
 
 
-def input_type() -> str:
-    return SETTINGS['INPUT']['TYPE']
-
-
-def input_band() -> str:
-    return SETTINGS['INPUT']['BAND']
+def min_timeseries_length() -> bool:
+    return SETTINGS['TIMESERIES']['MINIMUM_LENGTH']
 
 
 def consistent_timeseries_length() -> bool:
-    return SETTINGS['CONSISTENT_TIMESERIES_LENGTH']
+    return SETTINGS['TIMESERIES']['CONSISTENT_LENGTH']

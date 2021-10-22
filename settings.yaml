@@ -1,29 +1,21 @@
 PATHS:
   ROOT_PATH: '/storage/shafner/continuous_urban_change_detection'
   SPACENET7_PATH: '/storage/shafner/spacenet7'  # this is the original SpaceNet7 dataset
-  OSCD_PATH: '/storage/shafner/urban_change_detection/OSCD_dataset'  # this is the original OSCD dataset
 
-DATASET_NAMES:
-  SPACENET7: 'spacenet7_s1s2_dataset_v3'
-  OSCD: 'oscd_s1s2_dataset'
+DATASET_NAME: 'spacenet7_s1s2_dataset_v3'
 
 INPUT:
-  TYPE: 'cnn' # cnn or satellite
   SENSOR: 'fusion' # sentinel1 or sentinel2 or fusion
-  BAND: 'VV' # see available bands
   CONFIG_NAME_DICT:
     sar: 'sar_jaccardmorelikeloss'
     optical: 'optical_jaccardmorelikeloss'
     fusion: 'fusionda_cons05_jaccardmorelikeloss'
 
-INCLUDE_MASKED_DATA: True
-CONSISTENT_TIMESERIES_LENGTH: True
+TIMESERIES:
+  CONSISTENT_LENGTH: True
+  MINIMUM_LENGTH: 5
 
-PLOTTING:
-  FONTSIZE: 16
-  PLOTSIZE: 3
-
-SUBSET_SPACENET7:
+SUBSET:
   ACTIVATE: False
   AOI_IDS: [
     'L15-0331E-1257N_1327_3160_13',
@@ -40,7 +32,3 @@ SUBSET_SPACENET7:
     'L15-0566E-1185N_2265_3451_13',
     'L15-0595E-1278N_2383_3079_13',
   ]
-
-SUBSET_OSCD:
-  ACTIVATE: False
-  AOI_IDS: []
