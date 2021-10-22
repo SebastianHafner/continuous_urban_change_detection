@@ -95,7 +95,7 @@ def visualize_all_data(dataset: str, aoi_id: str, save_plot: bool = False):
 
 
 def visualize_data(dataset: str, aoi_id: str, save_plot: bool = False):
-    timeseries = dataset_helpers.get_timeseries(dataset, aoi_id, config.include_masked())
+    timeseries = dataset_helpers.get_timeseries(aoi_id)
     n = len(timeseries)
     gt_available = True if dataset == 'spacenet7' else False
     n_rows = 4 if gt_available else 3
@@ -104,33 +104,33 @@ def visualize_data(dataset: str, aoi_id: str, save_plot: bool = False):
     fig, axs = plt.subplots(n_rows, n, figsize=(n * plot_size, n_rows * plot_size))
 
     for i, (year, month, mask, s1, s2) in enumerate(tqdm(timeseries)):
-        visualization.plot_sar(axs[0, i], ds, aoi_id, year, month)
-        visualization.plot_optical(axs[1, i], ds, aoi_id, year, month)
+        visualization.plot_sar(axs[0, i], aoi_id, year, month)
+        visualization.plot_optical(axs[1, i], aoi_id, year, month)
 
         if gt_available:
             visualization.plot_buildings(axs[2, i], aoi_id, year, month)
 
-        raw_index = dataset_helpers.get_raw_index_from_date(dataset, aoi_id, year, month)
+        raw_index = dataset_helpers.get_raw_index_from_date(aoi_id, year, month)
         title = f'{raw_index} {year}-{month:02d}'
         if gt_available:
-            fully_masked = mask_helpers.is_fully_masked(dataset, aoi_id, year, month)
-            prediction_available = input_helpers.prediction_is_available(dataset, aoi_id, year, month)
+            fully_masked = mask_helpers.is_fully_masked(aoi_id, year, month)
+            prediction_available = input_helpers.prediction_is_available(aoi_id, year, month)
             if fully_masked or not prediction_available:
                 f1 = 'NaN'
             else:
                 y_true = label_helpers.load_label(aoi_id, year, month)
-                y_pred = input_helpers.load_prediction(dataset, aoi_id, year, month)
+                y_pred = input_helpers.load_prediction(aoi_id, year, month)
                 y_pred = y_pred > 0.5
                 f1 = metrics.compute_f1_score(y_pred.flatten(), y_true.flatten())
                 f1 = f'{f1:.3f}'
             title = f'{title} ({f1})'
 
         axs[0, i].set_title(title, fontsize=16)
-        visualization.plot_prediction(axs[n_rows - 1, i], dataset, aoi_id, year, month)
+        visualization.plot_prediction(axs[n_rows - 1, i], aoi_id, year, month)
     if not save_plot:
         plt.show()
     else:
-        dataset_name = dataset_helpers.dataset_name(dataset)
+        dataset_name = config.dataset_name()
         output_path = config.root_path() / 'plots' / 'inspection' / dataset_name
         output_file = output_path / f'{config.input_sensor()}_{aoi_id}.png'
         output_file.parent.mkdir(exist_ok=True)
@@ -302,8 +302,9 @@ def print_dataset_size(dataset: str):
 
 if __name__ == '__main__':
     ds = 'spacenet7'
-    for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(ds, min_timeseries_length=5)):
-        visualize_data(ds, aoi_id, save_plot=True)
+    for i, aoi_id in enumerate(dataset_helpers.get_aoi_ids(min_timeseries_length=config.min_timeseries_length())):
+        if aoi_id == 'L15-1335E-1166N_5342_3524_13':
+            visualize_data(ds, aoi_id, save_plot=True)
         # produce_satellite_timeseries_cube(ds, aoi_id, 'sentinel1', 'VV')
         # produce_change_date_label(ds, aoi_id)
         # visualize_satellite_data(ds, aoi_id, save_plot=True)

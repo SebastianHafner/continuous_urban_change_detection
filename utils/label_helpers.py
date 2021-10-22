@@ -17,8 +17,15 @@ def load_raw_label(aoi_id: str, year: int, month: int) -> np.ndarray:
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
     label = np.squeeze(label).astype(np.float)
-    mask = mask_helpers.load_mask('spacenet7', aoi_id, year, month)
+    mask = mask_helpers.load_mask(aoi_id, year, month)
     label = np.where(~mask, label, np.NaN)
+    return label
+
+
+def load_raw_label_in_timeseries(aoi_id: str, index: int) -> np.ndarray:
+    dates = dataset_helpers.get_timeseries(aoi_id)
+    year, month, *_ = dates[index]
+    label = load_raw_label(aoi_id, year, month)
     return label
 
 
@@ -42,6 +49,12 @@ def generate_change_label(aoi_id: str) -> np.ndarray:
     label_start = load_label_in_timeseries(aoi_id, 0)
     label_end = load_label_in_timeseries(aoi_id, -1)
     # change = np.array(label_start != label_end)
+
+    # label_start = load_raw_label_in_timeseries(aoi_id, 0)
+    # label_end = load_raw_label_in_timeseries(aoi_id, -1)
+    # diff = label_end - label_start
+    # change = diff > 0.1
+
     change = np.logical_and(label_start == 0, label_end == 1)
     return change.astype(np.uint8)
 

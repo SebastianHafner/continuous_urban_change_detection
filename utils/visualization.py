@@ -44,11 +44,10 @@ class ChangeConfidenceColorMap(object):
         return self.cmap
 
 
-def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'true_color',
-                 rescale_factor: float = 0.4):
+def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color', rescale_factor: float = 0.4):
     ax.set_xticks([])
     ax.set_yticks([])
-    file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -58,10 +57,10 @@ def plot_optical(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str 
     ax.imshow(bands)
 
 
-def plot_sar(ax, dataset: str, aoi_id: str, year: int, month: int, vis: str = 'VV'):
+def plot_sar(ax, aoi_id: str, year: int, month: int, vis: str = 'VV'):
     ax.set_xticks([])
     ax.set_yticks([])
-    file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -83,16 +82,16 @@ def plot_buildings(ax, aoi_id: str, year: int, month: int):
     ax.set_yticks([])
 
 
-def plot_change_label(ax, dataset, aoi_id: str, include_masked_data: bool = False):
-    change = label_helpers.generate_change_label(dataset, aoi_id, include_masked_data)
+def plot_change_label(ax, aoi_id: str):
+    change = label_helpers.generate_change_label(aoi_id)
     ax.imshow(change, cmap='gray', vmin=0, vmax=1)
     ax.set_xticks([])
     ax.set_yticks([])
 
 
-def plot_change_date_label(ax, aoi_id: str, include_masked_data: bool = False):
-    ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, include_masked_data)
-    change_date_label = label_helpers.generate_change_date_label(aoi_id, include_masked_data)
+def plot_change_date_label(ax, aoi_id: str):
+    ts = dataset_helpers.get_timeseries(aoi_id)
+    change_date_label = label_helpers.generate_change_date_label(aoi_id)
     cmap = DateColorMap(len(ts))
     ax.imshow(change_date_label, cmap=cmap.get_cmap(), vmin=cmap.get_vmin(), vmax=cmap.get_vmax())
     ax.set_xticks([])
@@ -123,8 +122,8 @@ def plot_blackwhite(ax, img: np.ndarray, cmap: str = 'gray'):
     ax.set_yticks([])
 
 
-def plot_classification(ax, pred: np.ndarray, dataset: str, aoi_id: str):
-    label = label_helpers.generate_change_label(dataset, aoi_id, config.include_masked()).astype(np.bool)
+def plot_classification(ax, pred: np.ndarray, aoi_id: str):
+    label = label_helpers.generate_change_label(aoi_id).astype(np.bool)
     pred = pred.squeeze().astype(np.bool)
     tp = np.logical_and(pred, label)
     fp = np.logical_and(pred, ~label)
@@ -151,24 +150,24 @@ def plot_change_confidence(ax, change: np.ndarray, confidence: np.ndarray, cmap:
     ax.set_yticks([])
 
 
-def plot_prediction(ax, dataset: str, aoi_id: str, year: int, month: int):
+def plot_prediction(ax, aoi_id: str, year: int, month: int):
     ax.set_xticks([])
     ax.set_yticks([])
-    if not input_helpers.prediction_is_available(dataset, aoi_id, year, month):
+    if not input_helpers.prediction_is_available(aoi_id, year, month):
         return
-    pred = input_helpers.load_prediction(dataset, aoi_id, year, month)
+    pred = input_helpers.load_prediction(aoi_id, year, month)
     ax.imshow(pred.clip(0, 1), cmap='gray')
 
 
-def plot_mask(ax, dataset: str, aoi_id: str, year: int, month: int):
-    mask = mask_helpers.load_mask(dataset, aoi_id, year, month)
+def plot_mask(ax, aoi_id: str, year: int, month: int):
+    mask = mask_helpers.load_mask(aoi_id, year, month)
     ax.imshow(mask.astype(np.uint8), cmap='gray')
     ax.set_xticks([])
     ax.set_yticks([])
 
 
 def plot_model_error(ax, method: str, aoi_id: str):
-    file = dataset_helpers.root_path() / 'inference' / method / f'model_error_{aoi_id}.tif'
+    file = config.root_path() / 'inference' / method / f'model_error_{aoi_id}.tif'
     error, _, _ = geofiles.read_tif(file)
     ax.imshow(error, cmap='OrRd', vmin=0, vmax=0.5)
     ax.set_xticks([])

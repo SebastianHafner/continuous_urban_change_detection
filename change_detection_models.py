@@ -140,16 +140,15 @@ class StepFunctionModel(ChangeDatingMethod):
 
         self.fitted_aoi = aoi_id
 
-    def change_detection(self, aoi_id: str, noise_reduction: bool = True) -> np.ndarray:
+    def change_detection(self, aoi_id: str, noise_reduction: bool = False) -> np.ndarray:
         self._fit(aoi_id)
 
         # convert to change date product to change detection (0 and length_ts is no change)
         change = self.cached_fit != 0
-        if noise_reduction:
-            kernel = np.ones((3, 3), dtype=np.uint8)
-            change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
-            noise = change_count == 1
-            change[noise] = 0
+        # kernel = np.ones((5, 5), dtype=np.uint8)
+        # change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
+        # noise = change_count == 1
+        # change[noise] = 0
 
         return np.array(change).astype(np.bool)
 
@@ -162,8 +161,8 @@ class StepFunctionModel(ChangeDatingMethod):
 class KernelStepFunctionModel(StepFunctionModel):
 
     def __init__(self, kernel_size: int = 3, error_multiplier: int = 2, min_prob_diff: float = 0.35,
-                 min_segment_length: int = 2, noise_reduction: bool = True):
-        super().__init__('kernelstepfunction')
+                 min_segment_length: int = 2):
+        super().__init__(error_multiplier, min_prob_diff, min_segment_length)
 
         self.kernel_size = kernel_size
 
@@ -174,8 +173,11 @@ class KernelStepFunctionModel(StepFunctionModel):
         timeseries = dataset_helpers.get_timeseries(aoi_id)
         self.length_ts = len(timeseries)
 
-        probs_cube = input_helpers.load_input_timeseries(aoi_id)
-        probs_cube = scipy.signal.convolve2d(probs_cube, in2, mode='same', boundary='symm')
+        probs_cube_raw = input_helpers.load_input_timeseries(aoi_id)
+        kernel = np.full((self.kernel_size, self.kernel_size), fill_value=1/self.kernel_size**2)
+        probs_cube = np.empty(probs_cube_raw.shape, dtype=np.single)
+        for i in range(self.length_ts):
+            probs_cube[:, :, i] = scipy.signal.convolve2d(probs_cube_raw[:, :, i], kernel, mode='same', boundary='symm')
 
         errors = []
         mean_diffs = []

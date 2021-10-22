@@ -36,10 +36,6 @@ def config_name() -> str:
         return config_name_dict['fusion']
 
 
-def include_masked() -> bool:
-    return SETTINGS['INCLUDE_MASKED_DATA']
-
-
 def subset_activated() -> bool:
     return SETTINGS['SUBSET']['ACTIVATE']
 

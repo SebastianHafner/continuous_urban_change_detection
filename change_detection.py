@@ -65,13 +65,12 @@ def quantitative_testing(model: cd_models.ChangeDetectionMethod, aoi_id: str):
 
 def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod):
     preds, gts = [], []
-    for aoi_id in tqdm(dataset_helpers.get_aoi_ids()):
-        if dataset_helpers.length_timeseries(aoi_id) > 6:
-            pred = model.change_detection(aoi_id)
-            preds.append(pred.flatten())
-            gt = label_helpers.generate_change_label(aoi_id)
-            gts.append(gt.flatten())
-            assert(pred.size == gt.size)
+    for aoi_id in tqdm(dataset_helpers.get_aoi_ids(min_timeseries_length=config.min_timeseries_length())):
+        pred = model.change_detection(aoi_id)
+        preds.append(pred.flatten())
+        gt = label_helpers.generate_change_label(aoi_id)
+        gts.append(gt.flatten())
+        assert(pred.size == gt.size)
 
     preds = np.concatenate(preds)
     gts = np.concatenate(gts)
@@ -84,7 +83,7 @@ def quantitative_testing_dataset(model: cd_models.ChangeDetectionMethod):
 
 
 def run_change_detection_inference(model: cd_models.ChangeDetectionMethod):
-    for aoi_id in tqdm(dataset_helpers.get_aoi_ids(ds)):
+    for aoi_id in tqdm(dataset_helpers.get_aoi_ids()):
         pred = model.change_detection(aoi_id)
         transform, crs = dataset_helpers.get_geo(aoi_id)
         path = config.root_path() / 'inference' / model.name / config.config_name()
@@ -116,8 +115,9 @@ def qualitative_testing_dataset(model: cd_models.ChangeDetectionMethod):
 if __name__ == '__main__':
     pcc = cd_models.PostClassificationComparison()
     thresholding = cd_models.Thresholding()
-    sf = cd_models.StepFunctionModel(error_multiplier=2, min_prob_diff=0.35, min_segment_length=2)
-    model = sf
+    sf = cd_models.StepFunctionModel(error_multiplier=2, min_prob_diff=0.3, min_segment_length=2)
+    ksf = cd_models.KernelStepFunctionModel(kernel_size=3, error_multiplier=2, min_prob_diff=0.3, min_segment_length=2)
+    model = ksf
     for i, aoi_id in enumerate((dataset_helpers.get_aoi_ids(min_timeseries_length=config.min_timeseries_length()))):
         # qualitative_testing(model, ds, aoi_id, save_plot=True)
         # quantitative_testing(model, ds, aoi_id)
