@@ -4,24 +4,20 @@ import preprocess_spacenet7
 import preprocess_oscd
 
 
-def dataset_path() -> Path:
-    return config.root_path() / config.dataset_name()
-
-
 def bad_data() -> dict:
-    bad_data_file = Path.cwd() / 'bad_data' / f'bad_data_{dataset_name()}.json'
+    bad_data_file = config.root_path() / 'bad_data' / f'bad_data_{config.dataset_name()}.json'
     bad_data = geofiles.load_json(bad_data_file)
     return bad_data
 
 
 def missing_aois() -> list:
-    file = Path.cwd() / 'missing_aois.json'
+    file = config.root_path() / 'missing_aois.json'
     missing = geofiles.load_json(file)
     return missing
 
 
 def timestamps() -> dict:
-    timestamps_file = dataset_path() / 'spacenet7_timestamps.json'
+    timestamps_file = config.dataset_path() / 'spacenet7_timestamps.json'
     if not timestamps_file.exists():
         preprocess_spacenet7.assemble_spacenet7_timestamps()
     assert(timestamps_file.exists())
@@ -30,7 +26,7 @@ def timestamps() -> dict:
 
 
 def metadata() -> dict:
-    metadata_file = dataset_path() / 'metadata.json'
+    metadata_file = config.dataset_path() / 'metadata.json'
     if not metadata_file.exists():
         preprocess_spacenet7.generate_spacenet7_metadata_file()
     assert (metadata_file.exists())
@@ -136,7 +132,7 @@ def get_aoi_ids(exclude_missing: bool = True, min_timeseries_length: int = None)
 
 
 def get_geo(aoi_id: str) -> tuple:
-    folder = dataset_path() / aoi_id / 'sentinel1'
+    folder = config.dataset_path() / aoi_id / 'sentinel1'
     file = [f for f in folder.glob('**/*') if f.is_file()][0]
     _, transform, crs = geofiles.read_tif(file)
     return transform, crs

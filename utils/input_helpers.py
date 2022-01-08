@@ -11,8 +11,8 @@ def load_input(aoi_id: str, year: int, month: int) -> np.ndarray:
     return load_prediction(aoi_id, year, month)
 
 
-def load_sentinel1(dataset: str, aoi_id: str, year: int, month: int, band: str):
-    file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+def load_sentinel1(aoi_id: str, year: int, month: int, band: str):
+    file = config.dataset_path() / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
     img, _, _ = geofiles.read_tif(file)
     bands = ['VV', 'VH']
     band_index = bands.index(band)
@@ -20,17 +20,14 @@ def load_sentinel1(dataset: str, aoi_id: str, year: int, month: int, band: str):
     return img
 
 
-def load_sentinel2(dataset: str, aoi_id: str, year: int, month: int, band: str):
-    file = dataset_helpers.dataset_path(dataset) / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+def load_sentinel2(aoi_id: str, year: int, month: int):
+    file = config.dataset_path() / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
     img, _, _ = geofiles.read_tif(file)
-    bands = ['B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A', 'B11', 'B12']
-    band_index = bands.index(band)
-    img = img[:, :, band_index]
     return img
 
 
 def load_prediction_raw(aoi_id: str, year: int, month: int, config_name: str) -> np.ndarray:
-    path = dataset_helpers.dataset_path() / aoi_id / config_name
+    path = config.dataset_path() / aoi_id / config_name
     pred_file = path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
     pred, _, _ = geofiles.read_tif(pred_file)
     pred = np.squeeze(pred)
@@ -43,14 +40,14 @@ def load_prediction(aoi_id: str, year: int, month: int) -> np.ndarray:
 
 
 def load_prediction_in_timeseries(aoi_id: str, index: int) -> np.ndarray:
-    dates = dataset_helpers.get_timeseries(dataset, aoi_id)
+    dates = dataset_helpers.get_timeseries(aoi_id)
     year, month, *_ = dates[index]
     pred = load_prediction(aoi_id, year, month)
     return pred
 
 
 def prediction_is_available(aoi_id: str, year: int, month: int) -> bool:
-    path = dataset_helpers.dataset_path() / aoi_id / config.config_name()
+    path = config.dataset_path() / aoi_id / config.config_name()
     pred_file = path / f'pred_{aoi_id}_{year}_{month:02d}.tif'
     return pred_file.exists()
 

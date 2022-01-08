@@ -1,5 +1,5 @@
 from pathlib import Path
-from utils import geofiles, dataset_helpers
+from utils import geofiles, dataset_helpers, config
 from tqdm import tqdm
 import numpy as np
 
@@ -15,14 +15,14 @@ def get_date(label_file: Path) -> tuple:
 
 # helper function to check if mask exists for time stamp
 def has_mask(aoi_id: str, year: int, month: int) -> bool:
-    mask_path = dataset_helpers.spacenet7_path() / 'train' / aoi_id / 'UDM_masks'
+    mask_path = config.spacenet7_path() / 'train' / aoi_id / 'UDM_masks'
     mask_file = mask_path / f'global_monthly_{year}_{month:02d}_mosaic_{aoi_id}_UDM.tif'
     return mask_file.exists()
 
 
 # creates dict with aoi_ids as keys and with timestamps of SpaceNet7 dataset as values
 def assemble_spacenet7_timestamps():
-    dataset_path = dataset_helpers.spacenet7_path() / 'train'
+    dataset_path = config.spacenet7_path() / 'train'
     data = {}
     aoi_paths = [f for f in dataset_path.iterdir() if f.is_dir()]
 
@@ -42,7 +42,7 @@ def assemble_spacenet7_timestamps():
         aoi_data = [(*d, has_mask(aoi_id, *d)) for d in dates]
         data[aoi_id] = aoi_data
 
-    output_file = dataset_helpers.dataset_path('spacenet7') / 'spacenet7_timestamps.json'
+    output_file = config.dataset_path() / 'spacenet7_timestamps.json'
     geofiles.write_json(output_file, data)
 
 
@@ -113,19 +113,18 @@ def assemble_spacenet7_masks():
 
 def generate_spacenet7_metadata_file():
 
-    timestamps = dataset_helpers.spacenet7_timestamps()
-    bad_data = dataset_helpers.bad_data('spacenet7')
+    timestamps = dataset_helpers.timestamps()
+    bad_data = dataset_helpers.bad_data()
     missing_aois = dataset_helpers.missing_aois()
 
     data = {
         's1_bands': ['VV', 'VH'],
-        's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B6', 'B8', 'B8A', 'B11', 'B12'],
+        's2_bands': ['B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A', 'B11', 'B12'],
         'yx_sizes': {},
         'aois': {}
     }
 
     for aoi_id in timestamps.keys():
-
         # skip aoi if it's missing
         if aoi_id in missing_aois:
             continue
@@ -144,7 +143,7 @@ def generate_spacenet7_metadata_file():
             aoi_data.append(timestamp_data)
 
             if not yx_size_set and s1:
-                s1_path = dataset_helpers.dataset_path('spacenet7') / aoi_id / 'sentinel1'
+                s1_path = config.dataset_path() / aoi_id / 'sentinel1'
                 s1_file = s1_path / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
                 arr, _, _ = geofiles.read_tif(s1_file)
                 data['yx_sizes'][aoi_id] = (arr.shape[0], arr.shape[1])
@@ -152,7 +151,7 @@ def generate_spacenet7_metadata_file():
 
         data['aois'][aoi_id] = aoi_data
 
-    output_file = dataset_helpers.dataset_path('spacenet7') / f'metadata.json'
+    output_file = config.dataset_path() / f'metadata.json'
     geofiles.write_json(output_file, data)
 
 

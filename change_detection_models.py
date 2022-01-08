@@ -2,7 +2,7 @@ import numpy as np
 from skimage.filters import threshold_otsu, threshold_local
 from abc import ABC, abstractmethod
 from utils import input_helpers, dataset_helpers, geofiles, label_helpers, config
-import scipy
+from scipy import signal
 from tqdm import tqdm
 
 
@@ -34,7 +34,7 @@ class ChangeDatingMethod(ChangeDetectionMethod):
 
 class PostClassificationComparison(ChangeDetectionMethod):
 
-    def __init__(self, threshold: float = 0.5, ignore_negative_changes: bool = False):
+    def __init__(self, threshold: float = 0.5, ignore_negative_changes: bool = True):
         super().__init__('postclassification')
         self.threshold = threshold
         self.ignore_negative_changes = ignore_negative_changes
@@ -146,7 +146,7 @@ class StepFunctionModel(ChangeDatingMethod):
         # convert to change date product to change detection (0 and length_ts is no change)
         change = self.cached_fit != 0
         # kernel = np.ones((5, 5), dtype=np.uint8)
-        # change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
+        # change_count = signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
         # noise = change_count == 1
         # change[noise] = 0
 
@@ -177,7 +177,7 @@ class KernelStepFunctionModel(StepFunctionModel):
         kernel = np.full((self.kernel_size, self.kernel_size), fill_value=1/self.kernel_size**2)
         probs_cube = np.empty(probs_cube_raw.shape, dtype=np.single)
         for i in range(self.length_ts):
-            probs_cube[:, :, i] = scipy.signal.convolve2d(probs_cube_raw[:, :, i], kernel, mode='same', boundary='symm')
+            probs_cube[:, :, i] = signal.convolve2d(probs_cube_raw[:, :, i], kernel, mode='same', boundary='symm')
 
         errors = []
         mean_diffs = []
@@ -221,6 +221,77 @@ class KernelStepFunctionModel(StepFunctionModel):
 
         self.fitted_aoi = aoi_id
 
+
+class SimpleStepFunctionModel(ChangeDatingMethod):
+
+    def __init__(self, kernel_size: int = 3, min_prob_diff: float = 0.30, min_segment_length: int = 2):
+        super().__init__('stepfunction')
+        self.fitted_aoi = None
+        # index when changed occurred in the time series
+        # (no change is index 0 and length_ts for non-urban and urban, respectively)
+        self.cached_fit = None
+        self.length_ts = None
+
+        self.kernel_size = kernel_size
+        self.min_prob_diff = min_prob_diff
+        self.min_segment_length = min_segment_length
+
+    def _fit(self, aoi_id: str):
+        if self.fitted_aoi == aoi_id:
+            return
+
+        timeseries = dataset_helpers.get_timeseries(aoi_id)
+        self.length_ts = len(timeseries)
+
+        probs_cube_raw = input_helpers.load_input_timeseries(aoi_id)
+        kernel = np.full((self.kernel_size, self.kernel_size), fill_value=1 / self.kernel_size ** 2)
+        probs_cube = np.empty(probs_cube_raw.shape, dtype=np.single)
+        for i in range(self.length_ts):
+            probs_cube[:, :, i] = signal.convolve2d(probs_cube_raw[:, :, i], kernel, mode='same', boundary='symm')
+
+        errors = []
+        mean_diffs = []
+
+        # break point detection
+        for i in range(self.min_segment_length, len(timeseries) - self.min_segment_length):
+            # compute predicted
+            probs_presegment = probs_cube[:, :, :i]
+            mean_prob_presegment = np.mean(probs_presegment, axis=-1)
+            pred_probs_presegment = np.repeat(mean_prob_presegment[:, :, np.newaxis], i, axis=-1)
+
+            probs_postsegment = probs_cube[:, :, i:]
+            mean_prob_postsegment = np.mean(probs_postsegment, axis=-1)
+            pred_probs_postsegment = np.repeat(mean_prob_postsegment[:, :, np.newaxis], len(timeseries) - i, axis=-1)
+
+            mean_diffs.append(mean_prob_postsegment - mean_prob_presegment)
+
+            pred_probs_break = np.concatenate((pred_probs_presegment, pred_probs_postsegment), axis=-1)
+            mse_break = self._mse(probs_cube, pred_probs_break)
+            errors.append(mse_break)
+
+        errors = np.stack(errors, axis=-1)
+        best_fit = np.argmin(errors, axis=-1)
+
+        mean_diffs = np.stack(mean_diffs, axis=-1)
+        m, n = mean_diffs.shape[:2]
+        mean_diff = mean_diffs[np.arange(m)[:, None], np.arange(n), best_fit]
+        change = mean_diff > self.min_prob_diff
+
+        self.cached_fit = np.where(change, best_fit + self.min_segment_length, 0)
+
+        self.fitted_aoi = aoi_id
+
+    def change_detection(self, aoi_id: str, noise_reduction: bool = False) -> np.ndarray:
+        self._fit(aoi_id)
+
+        # convert to change date product to change detection (0 and length_ts is no change)
+        change = self.cached_fit != 0
+        return np.array(change).astype(np.bool)
+
+    def change_dating(self, aoi_id: str, config_name: str = None) -> np.ndarray:
+        self._fit(aoi_id)
+
+        return np.array(self.cached_fit).astype(np.uint8)
 
 
 if __name__ == '__main__':

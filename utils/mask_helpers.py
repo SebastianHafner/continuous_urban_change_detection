@@ -1,4 +1,4 @@
-from utils import dataset_helpers, geofiles
+from utils import dataset_helpers, geofiles, config
 import numpy as np
 
 
@@ -34,7 +34,7 @@ def load_mask(aoi_id: str, year: int, month: int) -> np.ndarray:
 
 
 def load_masks(aoi_id: str) -> np.ndarray:
-    masks_file = dataset_helpers.dataset_path() / aoi_id / f'masks_{aoi_id}.tif'
+    masks_file = config.dataset_path() / aoi_id / f'masks_{aoi_id}.tif'
     assert(masks_file.exists())
     masks, *_ = geofiles.read_tif(masks_file)
     return masks.astype(np.bool)

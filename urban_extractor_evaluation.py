@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
-def run_urban_extractor_evaluation(config_name: str, aoi_id: str, include_masked_data: bool = False):
+def run_urban_extractor_evaluation(config_name: str, aoi_id: str):
     length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id)
     f1_scores, precisions, recalls = [], [], []
 
     for i in range(length_ts):
         label = label_helpers.load_label_in_timeseries(aoi_id, i)
-        pred = input_helpers.load_prediction_in_timeseries(config_name, 'spacenet7_s1s2_dataset', aoi_id, i)
+        pred = input_helpers.load_prediction_in_timeseries(config_name, aoi_id, i)
         pred = pred > 0.5
         f1_scores.append(metrics.compute_f1_score(pred, label))
         precisions.append(metrics.compute_precision(pred, label))
@@ -135,17 +135,17 @@ def print_urban_extraction_statistics():
 
 def print_overall_performance():
     labels, preds = [], []
-    aoi_ids = dataset_helpers.get_aoi_ids('spacenet7')
+    aoi_ids = dataset_helpers.get_aoi_ids()
     for aoi_id in tqdm(aoi_ids):
 
-        length_ts = dataset_helpers.length_timeseries('spacenet7', aoi_id, config.include_masked())
+        length_ts = dataset_helpers.length_timeseries(aoi_id)
 
         for j in range(length_ts):
-            year, month = dataset_helpers.get_date_from_index(j, 'spacenet7', aoi_id, config.include_masked())
-            if mask_helpers.is_fully_masked('spacenet7', aoi_id, year, month):
+            year, month = dataset_helpers.get_date_from_index(j, aoi_id)
+            if mask_helpers.is_fully_masked(aoi_id, year, month):
                 continue
-            label = label_helpers.load_label_in_timeseries(aoi_id, j, config.include_masked())
-            pred = input_helpers.load_prediction_in_timeseries('spacenet7', aoi_id, j, config.include_masked())
+            label = label_helpers.load_label_in_timeseries(aoi_id, j)
+            pred = input_helpers.load_prediction_in_timeseries(aoi_id, j)
             pred = pred > 0.5
             labels.append(label.flatten())
             preds.append(pred.flatten())
@@ -256,8 +256,8 @@ if __name__ == '__main__':
         pass
 
     # show_f1_evaluation(sort_by_performance=False)
-    print_urban_extraction_statistics()
-    # print_overall_performance()
+    # print_urban_extraction_statistics()
+    print_overall_performance()
 
     # plot_last_prediction_improvement()
 

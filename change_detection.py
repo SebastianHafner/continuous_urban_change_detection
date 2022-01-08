@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 FONTSIZE = 16
 
+
 def qualitative_testing(model: cd_models.ChangeDetectionMethod, aoi_id: str, save_plot: bool = False,
                         color_misclassifications: bool = False, sensor: str = 'sentinel2', show_f1: bool = True):
 
@@ -30,7 +31,7 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, aoi_id: str, sav
 
     change = model.change_detection(aoi_id)
     if color_misclassifications:
-        visualization.plot_classification(axs[3], change, dataset, aoi_id)
+        visualization.plot_classification(axs[3], change,  aoi_id)
     else:
         visualization.plot_blackwhite(axs[3], change)
     title = 'Change Pred'
@@ -43,9 +44,9 @@ def qualitative_testing(model: cd_models.ChangeDetectionMethod, aoi_id: str, sav
     if not save_plot:
         plt.show()
     else:
-        save_path = config.root_path() / 'plots' / 'testing' / model.name
+        save_path = config.output_path() / 'plots' / 'change_detection'
         save_path.mkdir(exist_ok=True)
-        output_file = save_path / f'change_{config.input_sensor()}_{aoi_id}.png'
+        output_file = save_path / f'change_{config.config_name()}_{aoi_id}.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
@@ -116,10 +117,11 @@ if __name__ == '__main__':
     pcc = cd_models.PostClassificationComparison()
     thresholding = cd_models.Thresholding()
     sf = cd_models.StepFunctionModel(error_multiplier=2, min_prob_diff=0.3, min_segment_length=2)
-    ksf = cd_models.KernelStepFunctionModel(kernel_size=3, error_multiplier=2, min_prob_diff=0.3, min_segment_length=2)
-    model = ksf
+    ksf = cd_models.KernelStepFunctionModel(kernel_size=3, error_multiplier=1, min_prob_diff=0.3, min_segment_length=2)
+    sf = cd_models.SimpleStepFunctionModel()
+    model = sf
     for i, aoi_id in enumerate((dataset_helpers.get_aoi_ids(min_timeseries_length=config.min_timeseries_length()))):
-        # qualitative_testing(model, ds, aoi_id, save_plot=True)
+        # qualitative_testing(model, aoi_id, save_plot=True)
         # quantitative_testing(model, ds, aoi_id)
         pass
 

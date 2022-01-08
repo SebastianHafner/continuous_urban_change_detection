@@ -1,6 +1,8 @@
 PATHS:
-  ROOT_PATH: '/storage/shafner/continuous_urban_change_detection'
-  SPACENET7_PATH: '/storage/shafner/spacenet7'  # this is the original SpaceNet7 dataset
+  ROOT: 'C:/Users/shafner/repos/continuous_urban_change_detection'
+  DATASET: 'C:/Users/shafner/datasets/spacenet7_s1s2_dataset_v3'
+  SPACENET7: '/storage/shafner/spacenet7'  # this is the original SpaceNet7 dataset
+  OUTPUT: 'C:/Users/shafner/continuous_urban_change_detection/output'
 
 DATASET_NAME: 'spacenet7_s1s2_dataset_v3'
 
@@ -9,7 +11,7 @@ INPUT:
   CONFIG_NAME_DICT:
     sar: 'sar_jaccardmorelikeloss'
     optical: 'optical_jaccardmorelikeloss'
-    fusion: 'fusionda_cons05_jaccardmorelikeloss'
+    fusion: 'fusionda_cucd_tta'
 
 TIMESERIES:
   CONSISTENT_LENGTH: True
@@ -24,7 +26,6 @@ SUBSET:
     'L15-0361E-1300N_1446_2989_13',
     'L15-0368E-1245N_1474_3210_13',
     'L15-0387E-1276N_1549_3087_13',
-    'L15-0434E-1218N_1736_3318_13',
     'L15-0487E-1246N_1950_3207_13',
     'L15-0506E-1204N_2027_3374_13',
     'L15-0544E-1228N_2176_3279_13',

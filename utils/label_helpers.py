@@ -1,9 +1,9 @@
-from utils import geofiles, dataset_helpers, mask_helpers
+from utils import geofiles, dataset_helpers, mask_helpers, config
 import numpy as np
 
 
 def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
-    buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
+    buildings_path = config.dataset_path() / aoi_id / 'buildings'
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
     label = np.squeeze(label > 0).astype(np.float)
@@ -13,7 +13,7 @@ def load_label(aoi_id: str, year: int, month: int) -> np.ndarray:
 
 
 def load_raw_label(aoi_id: str, year: int, month: int) -> np.ndarray:
-    buildings_path = dataset_helpers.dataset_path() / aoi_id / 'buildings'
+    buildings_path = config.dataset_path() / aoi_id / 'buildings'
     label_file = buildings_path / f'buildings_{aoi_id}_{year}_{month:02d}.tif'
     label, _, _ = geofiles.read_tif(label_file)
     label = np.squeeze(label).astype(np.float)
@@ -48,14 +48,19 @@ def load_label_timeseries(aoi_id: str) -> np.ndarray:
 def generate_change_label(aoi_id: str) -> np.ndarray:
     label_start = load_label_in_timeseries(aoi_id, 0)
     label_end = load_label_in_timeseries(aoi_id, -1)
-    # change = np.array(label_start != label_end)
+    change = np.array(label_start != label_end)
 
     # label_start = load_raw_label_in_timeseries(aoi_id, 0)
     # label_end = load_raw_label_in_timeseries(aoi_id, -1)
     # diff = label_end - label_start
     # change = diff > 0.1
 
-    change = np.logical_and(label_start == 0, label_end == 1)
+    # change = np.logical_and(label_start == 0, label_end == 1)
+    # import scipy
+    # kernel = np.ones((5, 5), dtype=np.uint8)
+    # change_count = scipy.signal.convolve2d(change, kernel, mode='same', boundary='fill', fillvalue=0)
+    # noise = change_count <= 3
+    # change[noise] = 0
     return change.astype(np.uint8)
 
 

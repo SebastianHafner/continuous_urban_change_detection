@@ -47,7 +47,7 @@ class ChangeConfidenceColorMap(object):
 def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color', rescale_factor: float = 0.4):
     ax.set_xticks([])
     ax.set_yticks([])
-    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
+    file = config.dataset_path() / aoi_id / 'sentinel2' / f'sentinel2_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)
@@ -60,7 +60,7 @@ def plot_optical(ax, aoi_id: str, year: int, month: int, vis: str = 'true_color'
 def plot_sar(ax, aoi_id: str, year: int, month: int, vis: str = 'VV'):
     ax.set_xticks([])
     ax.set_yticks([])
-    file = dataset_helpers.dataset_path() / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
+    file = config.dataset_path() / aoi_id / 'sentinel1' / f'sentinel1_{aoi_id}_{year}_{month:02d}.tif'
     if not file.exists():
         return
     img, _, _ = geofiles.read_tif(file)

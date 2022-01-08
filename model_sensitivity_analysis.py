@@ -15,28 +15,28 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
     f1_scores_extraction = []
     f1_scores_change = []
 
-    for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids('spacenet7'))):
+    for i, aoi_id in enumerate(tqdm(dataset_helpers.get_aoi_ids(min_timeseries_length=config.min_timeseries_length()))):
 
         # compute average urban extraction f1 score
         f1_scores_ts = []
-        ts = dataset_helpers.get_timeseries('spacenet7', aoi_id, config.include_masked())
+        ts = dataset_helpers.get_timeseries(aoi_id)
         if mode == 'first_last':
             ts = [ts[0], ts[-1]]
         for year, month, *_ in ts:
             label = label_helpers.load_label(aoi_id, year, month)
-            pred = input_helpers.load_prediction('spacenet7', aoi_id, year, month)
+            pred = input_helpers.load_prediction(aoi_id, year, month)
             pred = pred > 0.5
             f1_scores_ts.append(metrics.compute_f1_score(pred, label))
         f1_scores_extraction.append(np.mean(f1_scores_ts))
 
         # compute change f1 score
-        pred_change = model.change_detection('spacenet7', aoi_id)
-        label_change = label_helpers.generate_change_label('spacenet7', aoi_id, config.include_masked())
+        pred_change = model.change_detection(aoi_id)
+        label_change = label_helpers.generate_change_label(aoi_id)
         f1_scores_change.append(metrics.compute_f1_score(pred_change, label_change))
 
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    color = '#1f77b4' if config.input_sensor() == 'sentinel1' else '#d62728'
+    color = '#1f77b4'
     ax.scatter(f1_scores_extraction, f1_scores_change, c=color)
     ticks = np.linspace(0, 1, 6)
     tick_labels = [f'{tick:.1f}' for tick in ticks]
@@ -59,9 +59,9 @@ def sensitivity_to_f1(model: cd_models.ChangeDetectionMethod, mode: str, include
     if not save_plot:
         plt.show()
     else:
-        save_path = config.root_path() / 'plots' / 'sensitivity_analysis'
+        save_path = config.output_path() / 'plots'
         save_path.mkdir(exist_ok=True)
-        output_file = save_path / f'{model.name}_{mode}.png'
+        output_file = save_path / f'bua_extraction_sensitivity.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
@@ -112,6 +112,8 @@ def sensitivity_to_omissions(model: cd_models.ChangeDetectionMethod, include_mas
 
 if __name__ == '__main__':
 
-    sf = cd_models.StepFunctionModel(error_multiplier=2, min_prob_diff=0.2, min_segment_length=2)
-    sensitivity_to_f1(sf, 'all', include_regression_line=True, save_plot=False)
+    # sf = cd_models.StepFunctionModel(error_multiplier=2, min_prob_diff=0.2, min_segment_length=2)
+    sf = cd_models.SimpleStepFunctionModel()
+    pccd = cd_models.PostClassificationComparison()
+    sensitivity_to_f1(pccd, 'first_last', include_regression_line=False, save_plot=True)
     # sensitivity_to_omissions(stepfunction, True, save_plot=False)

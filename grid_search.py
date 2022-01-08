@@ -36,8 +36,8 @@ def run_grid_search(em_range: tuple, em_step_size: int, mdp_range: tuple, mdp_st
     mdp_candidates = np.arange(mdp_start, mdp_end + mdp_step_size, mdp_step_size)
     n = len(mdp_candidates)
 
-    fname = f'grid_search_{config.input_sensor()}_{config.subset_activated()}.json'
-    file = config.root_path() / 'grid_search' / fname
+    fname = f'grid_search_{config.config_name()}_{config.subset_activated()}.json'
+    file = config.output_path() / 'grid_search' / fname
 
     if file.exists() and not force_run:
         ablation_data = geofiles.load_json(file)
@@ -80,8 +80,8 @@ def run_grid_search(em_range: tuple, em_step_size: int, mdp_range: tuple, mdp_st
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         vmax = 0.5
         img = ax.imshow(matrix, vmin=0, vmax=vmax, cmap='jet')
-        xticks = np.arange(0, n, 1)
-        mdp_ticks = np.arange(mdp_start, mdp_end + mdp_step_size, mdp_step_size)
+        xticks = np.arange(0, n, 2)
+        mdp_ticks = np.arange(mdp_start, mdp_end + mdp_step_size, mdp_step_size * 2)
         xticklabels = [f'{mdp_tick:.1f}' for mdp_tick in mdp_ticks]
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticklabels, fontsize=FONTSIZE)
@@ -106,5 +106,5 @@ def run_grid_search(em_range: tuple, em_step_size: int, mdp_range: tuple, mdp_st
 
 
 if __name__ == '__main__':
-    run_grid_search(em_range=(1, 6), em_step_size=1, mdp_range=(0, 1), mdp_step_size=0.1, force_run=False)
+    run_grid_search(em_range=(1, 6), em_step_size=1, mdp_range=(0, 1), mdp_step_size=0.05, force_run=False)
 

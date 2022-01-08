@@ -11,18 +11,26 @@ def settings() -> dict:
 SETTINGS = settings()
 
 
-def dataset_name() -> str:
-    return Path(SETTINGS['DATASET_NAME'])
+def dataset_name() -> Path:
+    return SETTINGS['DATASET_NAME']
 
 
 # dataset paths
 def root_path() -> Path:
-    return Path(SETTINGS['PATHS']['ROOT_PATH'])
+    return Path(SETTINGS['PATHS']['ROOT'])
+
+
+def output_path() -> Path:
+    return Path(SETTINGS['PATHS']['OUTPUT'])
+
+
+def dataset_path() -> Path:
+    return Path(SETTINGS['PATHS']['DATASET'])
 
 
 # path to origin SpaceNet7 dataset
 def spacenet7_path() -> Path:
-    return Path(SETTINGS['PATHS']['SPACENET7_PATH'])
+    return Path(SETTINGS['PATHS']['SPACENET7'])
 
 
 def config_name() -> str:
